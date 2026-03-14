@@ -1,5 +1,5 @@
 /**
- * Version 1.1.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.2 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -217,35 +217,96 @@ const Scr3 = (() => {
     const channels = sm.channels || [];
     const expenses = sm.expenses || [];
     const cash = sm.cash;
+    const tk = API.getToken();
+
+    // ─── Sales ───
+    const chHtml = channels.length ? channels.map(c =>
+      `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>${e(c.channel_key)}</span><span style="font-weight:600">${fm(c.amount)}</span></div>`
+    ).join('') + `<div style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;font-weight:700;font-size:12px"><span>Total</span><span style="color:var(--gold)">${fm(sm.total_sales || 0)}</span></div>` : '<div style="font-size:11px;color:var(--t3)">ไม่มีข้อมูล</div>';
+
+    // ─── Expenses ───
+    const expHtml = expenses.length ? expenses.map(x =>
+      `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>${e(x.vendor_name)} · ${e(x.description)}</span><span style="font-weight:600;color:var(--r)">-${fm(x.total_amount)}</span></div>`
+    ).join('') : '<div style="font-size:11px;color:var(--t3)">ไม่มี</div>';
+
+    // ─── Cash On Hand ───
+    let cashHtml = '';
+    if (cash) {
+      const matched = cash.is_matched;
+      const clr = matched ? 'var(--g)' : 'var(--r)';
+      const bg = matched ? 'var(--gbg)' : 'var(--rbg)';
+      cashHtml = `<div class="sl">💵 Cash on Hand (auto จาก S4)</div>
+        <div class="card" style="padding:10px;border-left:3px solid ${clr}">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>Expected</span><span style="font-weight:600">${fm(cash.expected_cash || cash.expected || 0)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>Actual</span><span style="font-weight:600">${fm(cash.actual_cash || cash.actual || 0)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:4px 0 0;border-top:1px solid var(--bd2);margin-top:4px;font-weight:700;font-size:12px"><span>Diff</span><span style="color:${clr}">${fm(cash.difference || cash.variance || 0)}</span></div>
+          <div style="margin-top:6px;padding:6px 10px;background:${bg};border-radius:var(--rd);text-align:center;font-size:12px;font-weight:600;color:${clr}">${matched ? '✅ เงินตรง' : '🔴 เงินไม่ตรง!'}</div>
+          ${!matched && (cash.mismatch_reason || cash.reason) ? `<div style="font-size:10px;color:var(--t3);margin-top:4px">📝 ${e(cash.mismatch_reason || cash.reason)}</div>` : ''}
+        </div>`;
+    } else {
+      cashHtml = `<div class="sl">💵 Cash on Hand</div><div class="card" style="padding:10px"><div style="font-size:11px;color:var(--t3)">ยังไม่ได้นับเงิน</div></div>`;
+    }
+
+    // ─── Customer time periods ───
+    const custPeriods = [
+      { key: 'morning', label: '🌅 เช้า (open–11:00)', ph: 'เช่น คนทำงาน, ลูกค้าประจำ...' },
+      { key: 'midday', label: '☀️ กลางวัน (11:00–14:00)', ph: 'เช่น กลุ่มออฟฟิศ, นักเรียน...' },
+      { key: 'afternoon', label: '🌤️ บ่าย (14:00–17:00)', ph: 'เช่น แม่ลูก, ลูกค้าสั่งหวาน...' },
+      { key: 'evening', label: '🌆 เย็น (17:00–20:00)', ph: 'เช่น ฝรั่งมาคู่, after work...' },
+      { key: 'night', label: '🌙 ค่ำ–ปิด (20:00–close)', ph: 'เช่น วัยรุ่นเอเชีย, Take away...' },
+    ];
+
+    // ─── Waste detail ───
+    let wasteDetail = '';
+    if (r.has_waste === true) {
+      wasteDetail = `<div style="margin-top:8px;padding:10px;background:var(--gold-bg);border-radius:var(--rd)">
+        <div style="font-size:11px;color:var(--t2);margin-bottom:6px">กรุณากรอก Waste List ที่ BC Order</div>
+        <a onclick="location.href='https://onspider-spg.github.io/spg-bakeryorder/?token=${tk}#waste'" style="display:block;text-align:center;padding:10px;background:var(--gold);color:#fff;border-radius:var(--rd);font-weight:600;font-size:13px;cursor:pointer">🍞 เปิด Waste List →</a>
+      </div>`;
+    } else if (r.has_waste === false) {
+      wasteDetail = '<div style="margin-top:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--rd);font-size:11px;color:var(--t3)">✅ ไม่มี waste วันนี้</div>';
+    }
 
     el.innerHTML = `
-      <div class="sl" style="margin-top:0">💰 ยอดขาย</div>
-      <div class="card" style="padding:10px">${channels.length ? channels.map(c =>
-        `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>${e(c.channel_key)}</span><span style="font-weight:600">${fm(c.amount)}</span></div>`
-      ).join('') + `<div style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;font-weight:700;font-size:12px"><span>Total</span><span style="color:var(--gold)">${fm(sm.total_sales || 0)}</span></div>` : '<div style="font-size:11px;color:var(--t3)">ไม่มีข้อมูล</div>'}</div>
+      <div class="sl" style="margin-top:0">💰 ยอดขาย (auto จาก S1)</div>
+      <div class="card" style="padding:10px">${chHtml}</div>
 
-      <div class="sl">🧾 ค่าใช้จ่าย</div>
-      <div class="card" style="padding:10px">${expenses.length ? expenses.map(x =>
-        `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>${e(x.vendor_name)} · ${e(x.description)}</span><span style="font-weight:600;color:var(--r)">-${fm(x.total_amount)}</span></div>`
-      ).join('') : '<div style="font-size:11px;color:var(--t3)">ไม่มี</div>'}</div>
+      <div class="sl">🧾 ค่าใช้จ่าย (auto จาก S2)</div>
+      <div class="card" style="padding:10px">${expHtml}</div>
 
-      <div class="sl">🌤️ สภาพร้าน</div>
+      ${cashHtml}
+
+      <div class="sl">🌤️ สภาพร้านวันนี้</div>
       <div class="card" style="padding:10px">
-        <div class="fg"><label class="fl">Weather</label><div class="chips" style="margin:0" id="s8-weather">
-          ${['sunny','cloudy','rain','heavy_rain'].map(w => `<div class="chip${r.weather === w ? ' on' : ''}" onclick="Scr3.s8Pick('weather','${w}',this)">${w === 'sunny' ? '☀️' : w === 'cloudy' ? '☁️' : w === 'rain' ? '🌧️' : '⛈️'} ${w}</div>`).join('')}
+        <div class="fg"><label class="fl">อากาศ</label><div class="chips" style="margin:0" id="s8-weather">
+          ${[{k:'sunny',l:'☀️ แดด'},{k:'cloudy',l:'☁️ ครึ้ม'},{k:'rain',l:'🌧️ ฝน'},{k:'heavy_rain',l:'⛈️ ฝนหนัก'}].map(w => `<div class="chip${r.weather === w.k ? ' on' : ''}" onclick="Scr3.s8Pick('weather','${w.k}',this)">${w.l}</div>`).join('')}
         </div></div>
-        <div class="fg"><label class="fl">Traffic</label><div class="chips" style="margin:0" id="s8-traffic">
-          ${['above','normal','below'].map(t => `<div class="chip${r.traffic === t ? ' on' : ''}" onclick="Scr3.s8Pick('traffic','${t}',this)">${t}</div>`).join('')}
+        <div class="fg"><label class="fl">Traffic วันนี้</label><div class="chips" style="margin:0" id="s8-traffic">
+          ${[{k:'above',l:'📈 ดีกว่าปกติ'},{k:'normal',l:'➡️ ปกติ'},{k:'below',l:'📉 ต่ำกว่าปกติ'}].map(t => `<div class="chip${r.traffic === t.k ? ' on' : ''}" onclick="Scr3.s8Pick('traffic','${t.k}',this)">${t.l}</div>`).join('')}
         </div></div>
-        <div class="fg"><label class="fl">🧑‍🤝‍🧑 ลูกค้าแต่ละช่วง</label>
-          ${['morning','midday','afternoon','evening','night'].map(p => `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:10px;width:60px;color:var(--t3)">${p}</span><textarea class="fi" style="flex:1;padding:4px 6px;font-size:11px;min-height:28px" id="s8-cust-${p}" placeholder="ปกติ / มาก / น้อย">${e(r['customer_' + p] || '')}</textarea></div>`).join('')}
+        <div class="fg"><label class="fl">ระบบ POS / Printer</label><div class="chips" style="margin:0" id="s8-pos">
+          ${[{k:'ok',l:'✅ ปกติ'},{k:'issue',l:'⚠️ มีปัญหา'}].map(p => `<div class="chip${(r.pos_status || 'ok') === p.k ? ' on' : ''}" onclick="Scr3.s8Pick('pos_status','${p.k}',this)">${p.l}</div>`).join('')}
+        </div></div>
+      </div>
+
+      <div class="sl">🧑‍🤝‍🧑 กลุ่มลูกค้าตามช่วงเวลา</div>
+      <div class="card" style="padding:10px">
+        ${custPeriods.map(p => `<div class="fg" style="margin-bottom:6px"><label class="fl">${p.label}</label><textarea class="fi" style="padding:4px 6px;font-size:11px;min-height:28px" id="s8-cust-${p.key}" placeholder="${p.ph}">${e(r['customer_' + p.key] || '')}</textarea></div>`).join('')}
+      </div>
+
+      <div class="sl">📝 Overview Note</div>
+      <div class="card" style="padding:10px">
+        <textarea class="fi" id="s8-note" rows="2" placeholder="เช่น ฝนตกหนักช่วงเย็น...">${e(r.overview_note || '')}</textarea>
+      </div>
+
+      <div class="sl">🍞 Waste List</div>
+      <div class="card" style="padding:10px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px">ขนมปัง / เค้กที่เหลือ?</div>
+        <div class="chips" style="margin:0" id="s8-waste">
+          <div class="chip${r.has_waste === false ? ' on' : ''}" onclick="Scr3.s8Pick('waste','no',this)">❌ No</div>
+          <div class="chip${r.has_waste === true ? ' on' : ''}" onclick="Scr3.s8Pick('waste','yes',this)">✅ Yes</div>
         </div>
-        <div class="fg"><label class="fl">📝 Overview Note</label><textarea class="fi" id="s8-note" rows="2">${e(r.overview_note || '')}</textarea></div>
-        <div class="fg"><label class="fl">🍞 ขนมปัง/เค้กเหลือ?</label><div class="chips" style="margin:0" id="s8-waste">
-          <div class="chip${r.has_waste === false ? ' on' : ''}" onclick="Scr3.s8Pick('waste','no',this)">No</div>
-          <div class="chip${r.has_waste === true ? ' on' : ''}" onclick="Scr3.s8Pick('waste','yes',this)">Yes</div>
-        </div>
-        <div id="s8-waste-detail" style="margin-top:6px;font-size:11px">${r.has_waste === true ? '<a href="https://onspider-spg.github.io/spg-bakeryorder/#waste" style="color:var(--acc)">📋 เปิด Waste List → BC Order</a>' : r.has_waste === false ? '✅ ไม่มี waste วันนี้' : ''}</div></div>
+        <div id="s8-waste-detail">${wasteDetail}</div>
       </div>`;
   }
 
@@ -341,14 +402,25 @@ const Scr3 = (() => {
   }
 
   // S8 actions
-  let _s8Weather = null, _s8Traffic = null, _s8Waste = null;
+  let _s8Weather = null, _s8Traffic = null, _s8PosStatus = null, _s8Waste = null;
   function s8Pick(field, val, el) {
     if (field === 'weather') _s8Weather = val;
     else if (field === 'traffic') _s8Traffic = val;
+    else if (field === 'pos_status') _s8PosStatus = val;
     else if (field === 'waste') {
       _s8Waste = val === 'yes';
       const wd = document.getElementById('s8-waste-detail');
-      if (wd) wd.innerHTML = _s8Waste ? '<a href="https://onspider-spg.github.io/spg-bakeryorder/#waste" style="color:var(--acc)">📋 เปิด Waste List → BC Order</a>' : '✅ ไม่มี waste วันนี้';
+      if (wd) {
+        if (_s8Waste) {
+          const tk = API.getToken();
+          wd.innerHTML = `<div style="margin-top:8px;padding:10px;background:var(--gold-bg);border-radius:var(--rd)">
+            <div style="font-size:11px;color:var(--t2);margin-bottom:6px">กรุณากรอก Waste List ที่ BC Order</div>
+            <a onclick="location.href='https://onspider-spg.github.io/spg-bakeryorder/?token=${tk}#waste'" style="display:block;text-align:center;padding:10px;background:var(--gold);color:#fff;border-radius:var(--rd);font-weight:600;font-size:13px;cursor:pointer">🍞 เปิด Waste List →</a>
+          </div>`;
+        } else {
+          wd.innerHTML = '<div style="margin-top:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--rd);font-size:11px;color:var(--t3)">✅ ไม่มี waste วันนี้</div>';
+        }
+      }
     }
     el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
     el.classList.add('on');
@@ -471,7 +543,7 @@ const Scr3 = (() => {
         weather: _s8Weather || s8.report?.weather,
         traffic: _s8Traffic || s8.report?.traffic,
         has_waste: _s8Waste ?? s8.report?.has_waste,
-        pos_status: 'ok',
+        pos_status: _s8PosStatus || s8.report?.pos_status || 'ok',
         overview_note: document.getElementById('s8-note')?.value || '',
         customer_morning: document.getElementById('s8-cust-morning')?.value,
         customer_midday: document.getElementById('s8-cust-midday')?.value,

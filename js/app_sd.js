@@ -1,5 +1,5 @@
 /**
- * Version 1.0 | 14 MAR 2026 | Siam Palette Group
+ * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -342,6 +342,7 @@ const App = (() => {
 
   // ═══ INIT ═══
   async function init() {
+    const savedHash = location.hash.replace('#', '') || 'dashboard';
     go('loading');
     const token = API.initToken();
     const session = API.getSession();
@@ -363,9 +364,10 @@ const App = (() => {
       if (!API.isHQ()) API.setStore(S.session.store_id);
       else if (S.stores.length) API.setStore(S.stores[0].store_id);
 
-      // Navigate to saved hash or dashboard
-      const hash = location.hash.replace('#', '') || 'dashboard';
-      go(ROUTES[hash] ? hash : 'dashboard');
+      // Navigate to saved hash or dashboard (skip loading/no-access)
+      const skip = ['loading', 'no-access'];
+      const target = (ROUTES[savedHash] && !skip.includes(savedHash)) ? savedHash : 'dashboard';
+      go(target);
     } catch (err) {
       console.error('Init failed:', err);
       if (err.code === 'NO_ACCESS') go('no-access');

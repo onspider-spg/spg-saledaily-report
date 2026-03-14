@@ -1,5 +1,5 @@
 /**
- * Version 1.5 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -105,7 +105,7 @@ const Scr2 = (() => {
     s1.date = params?.date || s1.date || td();
     return `${toolbar('Daily Sale')}
     <div class="content" id="s1-content">
-      ${App.renderStoreSelector()}
+      ${App.renderStoreSelector({ noAll: true })}
       ${dateBar('s1', s1.date, 'Scr2.s1Nav')}
       <div id="s1-lock"></div>
       <div class="sl">ช่องทางขาย</div>
@@ -269,7 +269,7 @@ const Scr2 = (() => {
     s2.date = params?.date || s2.date || td();
     return `${toolbar('Expense')}
     <div class="content" id="s2-content">
-      ${App.renderStoreSelector()}
+      ${App.renderStoreSelector({ noAll: true })}
       ${dateBar('s2', s2.date, 'Scr2.s2Nav')}
       <div id="s2-lock"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -466,7 +466,7 @@ const Scr2 = (() => {
     s3.dateFrom = s3.dateFrom || App.addDays(now, -3);
     return `${toolbar('Invoice')}
     <div class="content" id="s3-content">
-      ${App.renderStoreSelector()}
+      ${App.renderStoreSelector({ noAll: true })}
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px">
         <span>📅</span>
         <input class="fi" type="date" style="flex:1;padding:6px 8px" id="s3-from" value="${s3.dateFrom}" onchange="Scr2.s3Reload()">
@@ -731,7 +731,7 @@ const Scr2 = (() => {
     s4.date = s4.date || td();
     return `${toolbar('Cash On Hand')}
     <div class="content" id="s4-content">
-      ${App.renderStoreSelector()}
+      ${App.renderStoreSelector({ noAll: true })}
       ${dateBar('s4', s4.date, 'Scr2.s4Nav')}
       <div class="sl">🧮 Auto-Calculation</div>
       <div id="s4-calc"><div class="skeleton sk-card" style="height:140px"></div></div>

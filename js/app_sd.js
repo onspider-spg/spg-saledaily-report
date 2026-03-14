@@ -1,5 +1,5 @@
 /**
- * Version 1.8.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.8.2 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -336,10 +336,13 @@ const App = (() => {
   function addDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
   // ═══ STORE SELECTOR (HQ only) ═══
-  function renderStoreSelector() {
+  function renderStoreSelector(opts) {
     if (!API.isHQ()) return '';
-    const sel = API.getStore();
-    const allPill = `<div class="store-pill${sel === 'ALL' ? ' on' : ''}" onclick="App.selectStore('ALL')">ทุกร้าน</div>`;
+    const noAll = opts?.noAll || false;
+    let sel = API.getStore();
+    // Auto-pick first store if ALL not allowed
+    if (noAll && (!sel || sel === 'ALL') && S.stores.length) { sel = S.stores[0].store_id; API.setStore(sel); }
+    const allPill = noAll ? '' : `<div class="store-pill${sel === 'ALL' ? ' on' : ''}" onclick="App.selectStore('ALL')">ทุกร้าน</div>`;
     return `<div class="store-sel">${allPill}${S.stores.map(s =>
       `<div class="store-pill${s.store_id === sel ? ' on' : ''}" onclick="App.selectStore('${s.store_id}')">${esc(s.short || s.store_id)}</div>`
     ).join('')}</div>`;

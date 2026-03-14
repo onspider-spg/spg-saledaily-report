@@ -1,5 +1,5 @@
 /**
- * Version 1.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.2 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -367,16 +367,15 @@ const Scr2 = (() => {
   // ═══════════════════════════════════════════
   // S3: INVOICE
   // ═══════════════════════════════════════════
-  let s3 = { invoices: [], summary: {}, synced: false, dateFrom: '', dateTo: '' };
+  let s3 = { invoices: [], summary: {}, dateFrom: '', dateTo: '', offset: 0, hasMore: false };
 
   function renderS3List() {
     const now = td();
-    s3.dateFrom = s3.dateFrom || now.substring(0, 7) + '-01';
     s3.dateTo = s3.dateTo || now;
+    s3.dateFrom = s3.dateFrom || App.addDays(now, -3);
     return `${toolbar('Invoice')}
     <div class="content" id="s3-content">
       ${App.renderStoreSelector()}
-      <div id="s3-lock"></div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px">
         <span>📅</span>
         <input class="fi" type="date" style="flex:1;padding:6px 8px" id="s3-from" value="${s3.dateFrom}" onchange="Scr2.s3Reload()">
@@ -386,17 +385,23 @@ const Scr2 = (() => {
       <button class="btn btn-gold btn-full" style="margin-bottom:10px;padding:10px" onclick="App.go('invoice-form')">+ New Invoice →</button>
       <div id="s3-kpi" class="kpi-row kpi-3"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
       <div id="s3-list"><div class="skeleton sk-card"></div></div>
+      <div id="s3-more" style="display:none;text-align:center;padding:10px">
+        <span style="font-size:11px;color:var(--acc);padding:5px 14px;border:1px solid var(--bd);border-radius:var(--rd);cursor:pointer" onclick="Scr2.s3LoadMore()">โหลดเพิ่ม →</span>
+      </div>
     </div>`;
   }
 
-  async function loadS3List() {
+  async function loadS3List(reset) {
+    if (reset) { s3.invoices = []; s3.offset = 0; }
     if (_busy.s3) return; _busy.s3 = true;
     try {
       s3.dateFrom = document.getElementById('s3-from')?.value || s3.dateFrom;
       s3.dateTo = document.getElementById('s3-to')?.value || s3.dateTo;
-      const data = await API.getInvoices({ store_id: API.getStore(), date_from: s3.dateFrom, date_to: s3.dateTo });
-      s3.invoices = data.invoices || [];
+      const data = await API.getInvoices({ store_id: API.getStore(), date_from: s3.dateFrom, date_to: s3.dateTo, limit: 10, offset: s3.offset });
+      const newInvs = data.invoices || [];
+      s3.invoices = s3.offset === 0 ? newInvs : [...s3.invoices, ...newInvs];
       s3.summary = data.summary || {};
+      s3.hasMore = data.has_more || false;
       fillS3List();
     } catch (err) { App.toast('โหลดข้อมูลไม่สำเร็จ', 'error'); }
     finally { _busy.s3 = false; }
@@ -405,9 +410,9 @@ const Scr2 = (() => {
   function fillS3List() {
     const sm = s3.summary;
     document.getElementById('s3-kpi').innerHTML = `
-      <div class="kpi-box"><div class="kpi-label">Total</div><div class="kpi-val" style="font-size:14px">${sm.count || 0}</div></div>
-      <div class="kpi-box"><div class="kpi-label">Unpaid</div><div class="kpi-val" style="font-size:14px;color:var(--r)">${fm(sm.unpaid_total || 0)}</div></div>
-      <div class="kpi-box"><div class="kpi-label">Paid</div><div class="kpi-val" style="font-size:14px;color:var(--g)">${fm((sm.total || 0) - (sm.unpaid_total || 0))}</div></div>`;
+      <div class="kpi-box"><div class="kpi-label">Total</div><div class="kpi-val" style="font-size:14px">${s3.invoices.length}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Unpaid</div><div class="kpi-val" style="font-size:14px;color:var(--r)">${fm(s3.invoices.filter(i => i.payment_status === 'unpaid').reduce((s, i) => s + (i.total_amount || 0), 0))}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Paid</div><div class="kpi-val" style="font-size:14px;color:var(--g)">${fm(s3.invoices.filter(i => i.payment_status === 'paid').reduce((s, i) => s + (i.total_amount || 0), 0))}</div></div>`;
 
     const el = document.getElementById('s3-list');
     if (!el) return;
@@ -418,15 +423,17 @@ const Scr2 = (() => {
       return `<div class="li-card" style="border-left-color:${bc};cursor:pointer" onclick="App.go('invoice-form',{id:'${inv.id}'})">
         <div style="display:flex;justify-content:space-between">
           <div><div style="font-size:12px;font-weight:700">${e(inv.invoice_no)}</div>
-          <div style="font-size:10px;color:var(--t3)">${e(inv.vendor_name)}</div></div>
+          <div style="font-size:10px;color:var(--t3)">${e(inv.vendor_name)} · ${inv.invoice_date || ''}</div></div>
           <div style="text-align:right"><div style="font-size:13px;font-weight:700${isPaid ? ';color:var(--g)' : ''}">${fm(inv.total_amount)}</div>
           <span class="sts ${isPaid ? 'sts-ok' : 'sts-err'}">${isPaid ? 'Paid' : 'Unpaid'}</span></div>
         </div>
       </div>`;
     }).join('');
+    document.getElementById('s3-more').style.display = s3.hasMore ? '' : 'none';
   }
 
-  function s3Reload() { loadS3List(); }
+  function s3Reload() { loadS3List(true); }
+  function s3LoadMore() { s3.offset += 10; loadS3List(false); }
 
   // ─── S3 FORM ───
   let s3f = { id: null, photoUrl: '' };
@@ -437,7 +444,7 @@ const Scr2 = (() => {
     <div class="content" id="s3f-content">
       <div class="card">
         <div style="display:flex;gap:4px;margin-bottom:10px"><span class="tag tag-gray">Store: ${e(API.getStore())}</span><span class="tag tag-b">Invoice</span></div>
-        <div class="fg"><label class="fl">📅 Issue Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-date" value="${td()}"></div>
+        <div class="fg"><label class="fl">📅 Issue Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-date" value="${td()}" onchange="Scr2.s3fDateChange()"></div>
         <div class="fg"><label class="fl">Invoice No <span class="req">*</span></label><input class="fi" id="s3f-no"></div>
         <div class="fg"><label class="fl">Vendor <span class="req">*</span></label>
           <select class="fi" id="s3f-vendor"><option value="">-- เลือก --</option>${(App.S.vendors || []).map(v => `<option value="${e(v.name)}">${e(v.name)}</option>`).join('')}</select></div>
@@ -452,7 +459,7 @@ const Scr2 = (() => {
           <span style="font-size:12px;font-weight:700;color:var(--r)">Invoice = Unpaid เสมอ</span>
           <div style="font-size:10px;color:var(--t3);margin-top:2px">จ่ายผ่านหน้า Expense เมื่อถึงวัน Due</div>
         </div>
-        <div class="fg"><label class="fl">Due Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-due"></div>
+        <div class="fg"><label class="fl">Due Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-due" min="${App.addDays(td(), 1)}"></div>
         <div class="fg"><label class="fl">📝 Note</label><input class="fi" id="s3f-note"></div>
         <div class="fg"><label class="fl">📸 Invoice Photo <span class="req">*</span></label>
           <div class="pbox" id="s3f-photo-box" onclick="document.getElementById('s3f-file').click()"><div>📸</div><div style="font-size:8px">* บังคับ</div></div>
@@ -487,6 +494,16 @@ const Scr2 = (() => {
     s3fCalc();
   }
 
+  function s3fDateChange() {
+    const issueDate = document.getElementById('s3f-date')?.value;
+    const dueEl = document.getElementById('s3f-due');
+    if (issueDate && dueEl) {
+      const minDue = App.addDays(issueDate, 1);
+      dueEl.min = minDue;
+      if (dueEl.value && dueEl.value <= issueDate) dueEl.value = minDue;
+    }
+  }
+
   function s3fCalc() {
     const a = parseFloat(document.getElementById('s3f-amt')?.value) || 0;
     const g = parseFloat(document.getElementById('s3f-gst')?.value) || 0;
@@ -508,6 +525,10 @@ const Scr2 = (() => {
 
   async function s3fSave() {
     if (!s3f.photoUrl) return App.toast('กรุณาถ่ายรูป Invoice', 'error');
+    const issueDate = document.getElementById('s3f-date')?.value;
+    const dueDate = document.getElementById('s3f-due')?.value;
+    if (!dueDate) return App.toast('กรุณาใส่ Due Date', 'error');
+    if (dueDate <= issueDate) return App.toast('Due Date ต้องหลังจาก Issue Date', 'error');
     const btn = document.getElementById('s3f-save'); if (btn) btn.disabled = true;
     try {
       await API.saveInvoice({
@@ -694,7 +715,7 @@ const Scr2 = (() => {
     // S2
     renderS2, loadS2, s2Nav, s2ShowPopup, s2SetPm, s2CalcTotal, s2HandlePhoto, s2Save, s2Delete, s2ConfirmDelete,
     // S3
-    renderS3List, loadS3List, s3Reload, s3fCalc, s3fHandlePhoto, s3fSave,
+    renderS3List, loadS3List, s3Reload, s3LoadMore, s3fCalc, s3fDateChange, s3fHandlePhoto, s3fSave,
     renderS3Form, loadS3Form,
     // S4
     renderS4, loadS4, s4Nav, s4Check, s4HandlePhoto, s4Submit, s4Confirm,

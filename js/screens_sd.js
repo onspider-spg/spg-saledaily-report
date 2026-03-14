@@ -1,5 +1,5 @@
 /**
- * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens_sd.js — Dashboard T1 Admin + T4 Store
@@ -135,16 +135,18 @@ const Scr = (() => {
       API.getStoreStatus().catch(() => null),
     ]);
 
-    // Chart
+    // Chart — 4-line: Sales TW/LW (green) + Expense TW/LW (red)
     if (chartEl) {
       if (chartData) {
         chartEl.className = 'card';
         chartEl.style.height = 'auto';
         chartEl.innerHTML = `<div class="sl" style="margin-top:0">📈 This Week vs Last Week</div>
-          <div style="display:flex;align-items:flex-end;gap:4px;height:60px">${renderMiniChart(chartData)}</div>
-          <div style="display:flex;gap:12px;margin-top:6px;font-size:10px">
-            <span><span style="color:var(--acc)">■</span> This week</span>
-            <span><span style="color:var(--bd)">■</span> Last week</span>
+          ${renderLineChart(chartData)}
+          <div style="display:flex;gap:12px;margin-top:6px;font-size:10px;flex-wrap:wrap">
+            <span style="color:var(--g)">━ Revenue TW</span>
+            <span style="color:var(--g);opacity:.4">┄ Revenue LW</span>
+            <span style="color:var(--r)">━ Expense TW</span>
+            <span style="color:var(--r);opacity:.4">┄ Expense LW</span>
           </div>`;
       } else { chartEl.innerHTML = ''; chartEl.className = ''; chartEl.style.height = '0'; }
     }
@@ -212,24 +214,36 @@ const Scr = (() => {
     </div>`;
   }
 
-  function renderMiniChart(data) {
-    if (!data?.this_week) return '';
-    const all = [...(data.this_week || []), ...(data.last_week || [])].map(d => d.total || 0);
+  function renderLineChart(data) {
+    const stw = data.sales_tw || [0,0,0,0,0,0,0];
+    const slw = data.sales_lw || [0,0,0,0,0,0,0];
+    const etw = data.exp_tw || [0,0,0,0,0,0,0];
+    const elw = data.exp_lw || [0,0,0,0,0,0,0];
+    const labels = data.labels || ['จ.','อ.','พ.','พฤ.','ศ.','ส.','อา.'];
+    const all = [...stw, ...slw, ...etw, ...elw];
     const max = Math.max(...all, 1);
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days.map((d, i) => {
-      const tw = data.this_week?.[i]?.total || 0;
-      const lw = data.last_week?.[i]?.total || 0;
-      const twH = Math.max(4, Math.round(tw / max * 56));
-      const lwH = Math.max(4, Math.round(lw / max * 56));
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <div style="display:flex;gap:2px;align-items:flex-end;height:56px">
-          <div style="width:8px;height:${lwH}px;background:var(--bd);border-radius:2px 2px 0 0"></div>
-          <div style="width:8px;height:${twH}px;background:var(--acc2);border-radius:2px 2px 0 0"></div>
-        </div>
-        <div style="font-size:8px;color:var(--t4)">${d}</div>
-      </div>`;
+    const W = 320, H = 100, PX = 30, PY = 10;
+    const cw = W - PX * 2, ch = H - PY * 2;
+    const x = (i) => PX + (i / 6) * cw;
+    const y = (v) => PY + ch - (v / max) * ch;
+    const line = (arr, color, dash) => {
+      const pts = arr.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" ${dash ? 'stroke-dasharray="4,3"' : ''} stroke-linecap="round" stroke-linejoin="round"/>`;
+    };
+    const dots = (arr, color) => arr.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.5" fill="${color}"/>`).join('');
+    const grid = [0, 0.25, 0.5, 0.75, 1].map(p => {
+      const yy = PY + ch - p * ch;
+      const val = Math.round(max * p);
+      return `<line x1="${PX}" y1="${yy}" x2="${W - PX}" y2="${yy}" stroke="#eee" stroke-width="0.5"/><text x="${PX - 4}" y="${yy + 3}" text-anchor="end" fill="#bbb" font-size="7">${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}</text>`;
     }).join('');
+    const xLabels = labels.map((l, i) => `<text x="${x(i).toFixed(1)}" y="${H - 1}" text-anchor="middle" fill="#999" font-size="8">${l}</text>`).join('');
+
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--font)">
+      ${grid}${xLabels}
+      ${line(slw, '#86efac', true)}${line(stw, '#059669', false)}
+      ${line(elw, '#fca5a5', true)}${line(etw, '#dc2626', false)}
+      ${dots(stw, '#059669')}${dots(etw, '#dc2626')}
+    </svg>`;
   }
 
   return { renderDashboard, loadDashboard };

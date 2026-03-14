@@ -1,5 +1,5 @@
 /**
- * Version 1.0 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -38,8 +38,8 @@ const Scr2 = (() => {
   // ═══════════════════════════════════════════
   let s1 = { date: '', channels: [], amounts: {}, photoCard: null, photoCash: null, synced: false, saleId: null, _target: null };
 
-  function renderS1() {
-    s1.date = s1.date || td();
+  function renderS1(params) {
+    s1.date = params?.date || s1.date || td();
     return `${toolbar('Daily Sale')}
     <div class="content" id="s1-content">
       ${App.renderStoreSelector()}
@@ -67,7 +67,8 @@ const Scr2 = (() => {
     </div>`;
   }
 
-  async function loadS1() {
+  async function loadS1(params) {
+    if (params?.date) s1.date = params.date;
     try {
       const data = await API.getDailySale(s1.date);
       s1.channels = App.S.channels || [];
@@ -182,8 +183,8 @@ const Scr2 = (() => {
   // ═══════════════════════════════════════════
   let s2 = { date: '', expenses: [], total: 0, synced: false };
 
-  function renderS2() {
-    s2.date = s2.date || td();
+  function renderS2(params) {
+    s2.date = params?.date || s2.date || td();
     return `${toolbar('Expense')}
     <div class="content" id="s2-content">
       ${App.renderStoreSelector()}
@@ -200,7 +201,8 @@ const Scr2 = (() => {
     </div>`;
   }
 
-  async function loadS2() {
+  async function loadS2(params) {
+    if (params?.date) s2.date = params.date;
     try {
       const data = await API.getExpenses(s2.date);
       s2.expenses = data.expenses || [];

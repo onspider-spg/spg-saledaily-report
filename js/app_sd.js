@@ -1,5 +1,5 @@
 /**
- * Version 1.3 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.4 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -29,8 +29,8 @@ const App = (() => {
     'loading':        { render: () => renderLoading() },
     'no-access':      { render: () => renderNoAccess() },
     'dashboard':      { render: () => Scr.renderDashboard(),  onLoad: () => Scr.loadDashboard() },
-    'daily-sale':     { render: () => Scr2.renderS1(),              onLoad: () => Scr2.loadS1() },
-    'expense':        { render: () => Scr2.renderS2(),              onLoad: () => Scr2.loadS2() },
+    'daily-sale':     { render: (p) => Scr2.renderS1(p),            onLoad: (p) => Scr2.loadS1(p) },
+    'expense':        { render: (p) => Scr2.renderS2(p),            onLoad: (p) => Scr2.loadS2(p) },
     'invoice':        { render: () => Scr2.renderS3List(),          onLoad: () => Scr2.loadS3List() },
     'invoice-form':   { render: (p) => Scr2.renderS3Form(p),       onLoad: (p) => Scr2.loadS3Form(p) },
     'cash':           { render: () => Scr2.renderS4(),              onLoad: () => Scr2.loadS4() },
@@ -334,7 +334,8 @@ const App = (() => {
   function renderStoreSelector() {
     if (!API.isHQ()) return '';
     const sel = API.getStore();
-    return `<div class="store-sel">${S.stores.map(s =>
+    const allPill = `<div class="store-pill${sel === 'ALL' ? ' on' : ''}" onclick="App.selectStore('ALL')">ทุกร้าน</div>`;
+    return `<div class="store-sel">${allPill}${S.stores.map(s =>
       `<div class="store-pill${s.store_id === sel ? ' on' : ''}" onclick="App.selectStore('${s.store_id}')">${esc(s.short || s.store_id)}</div>`
     ).join('')}</div>`;
   }
@@ -362,7 +363,7 @@ const App = (() => {
 
       // Default store
       if (!API.isHQ()) API.setStore(S.session.store_id);
-      else if (S.stores.length) API.setStore(S.stores[0].store_id);
+      else API.setStore('ALL');
 
       // Navigate to saved hash or dashboard (skip loading/no-access)
       const skip = ['loading', 'no-access'];

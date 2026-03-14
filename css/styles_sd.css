@@ -1,4 +1,4 @@
-/* Version 1.0.1 | 15 MAR 2026 | Siam Palette Group */
+/* Version 1.1 | 15 MAR 2026 | Siam Palette Group */
 
 /* ═══ DESIGN TOKENS ═══ */
 :root {
@@ -279,6 +279,11 @@ input, select, textarea, button { font-family:var(--font); }
 
 /* ═══ EMPTY STATE ═══ */
 .empty-state { text-align:center; padding:40px 20px; color:var(--t3); font-size:13px; }
+
+/* ═══ RESPONSIVE ═══ */
+/* ═══ COUNTER BUTTON (incidents/tasks) ═══ */
+.cnt-btn { width:28px; height:28px; border-radius:50%; border:1.5px solid var(--bd); background:var(--bg); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--font); flex-shrink:0; }
+.cnt-btn:active { background:var(--bg3); }
 
 /* ═══ RESPONSIVE ═══ */
 @media (max-width:768px) {

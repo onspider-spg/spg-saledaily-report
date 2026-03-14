@@ -1,5 +1,5 @@
 /**
- * Version 1.2 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.2.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -436,10 +436,11 @@ const Scr2 = (() => {
   function s3LoadMore() { s3.offset += 10; loadS3List(false); }
 
   // ─── S3 FORM ───
-  let s3f = { id: null, photoUrl: '' };
+  let s3f = { id: null, photoUrl: '', hasCN: false };
 
   function renderS3Form(params) {
     s3f.id = params?.id || null;
+    s3f.hasCN = false;
     return `${toolbar(s3f.id ? 'Edit Invoice' : 'New Invoice')}
     <div class="content" id="s3f-content">
       <div class="card">
@@ -461,6 +462,17 @@ const Scr2 = (() => {
         </div>
         <div class="fg"><label class="fl">Due Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-due" min="${App.addDays(td(), 1)}"></div>
         <div class="fg"><label class="fl">📝 Note</label><input class="fi" id="s3f-note"></div>
+        <div class="divider"></div>
+        <div class="fg"><label class="fl">🔄 Credit Note</label><div class="chips" style="margin:0" id="s3f-cn-toggle">
+          <div class="chip on" onclick="Scr2.s3fCnToggle(false,this)">No</div>
+          <div class="chip" onclick="Scr2.s3fCnToggle(true,this)">Yes</div>
+        </div></div>
+        <div id="s3f-cn-fields" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="fg"><label class="fl">Credit Note No <span class="req">*</span></label><input class="fi" id="s3f-cn-no" placeholder="CN-001"></div>
+            <div class="fg"><label class="fl">Credit Note Amount <span class="req">*</span></label><input class="fi" type="number" step="0.01" id="s3f-cn-amt" placeholder="0.00"></div>
+          </div>
+        </div>
         <div class="fg"><label class="fl">📸 Invoice Photo <span class="req">*</span></label>
           <div class="pbox" id="s3f-photo-box" onclick="document.getElementById('s3f-file').click()"><div>📸</div><div style="font-size:8px">* บังคับ</div></div>
           <input type="file" id="s3f-file" accept="image/*" style="display:none" onchange="Scr2.s3fHandlePhoto(event)">
@@ -491,6 +503,18 @@ const Scr2 = (() => {
       const box = document.getElementById('s3f-photo-box');
       if (box) { box.innerHTML = `<img src="${inv.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; }
     }
+    // Credit Note
+    if (inv.has_credit_note) {
+      s3f.hasCN = true;
+      const toggleChips = document.querySelectorAll('#s3f-cn-toggle .chip');
+      if (toggleChips.length >= 2) { toggleChips[0].classList.remove('on'); toggleChips[1].classList.add('on'); }
+      const fields = document.getElementById('s3f-cn-fields');
+      if (fields) fields.style.display = '';
+      const cnNo = document.getElementById('s3f-cn-no');
+      const cnAmt = document.getElementById('s3f-cn-amt');
+      if (cnNo) cnNo.value = inv.credit_note_no || '';
+      if (cnAmt) cnAmt.value = inv.credit_note_amount || '';
+    }
     s3fCalc();
   }
 
@@ -502,6 +526,13 @@ const Scr2 = (() => {
       dueEl.min = minDue;
       if (dueEl.value && dueEl.value <= issueDate) dueEl.value = minDue;
     }
+  }
+
+  function s3fCnToggle(show, el) {
+    if (el) { el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on')); el.classList.add('on'); }
+    const fields = document.getElementById('s3f-cn-fields');
+    if (fields) fields.style.display = show ? '' : 'none';
+    s3f.hasCN = show;
   }
 
   function s3fCalc() {
@@ -529,6 +560,11 @@ const Scr2 = (() => {
     const dueDate = document.getElementById('s3f-due')?.value;
     if (!dueDate) return App.toast('กรุณาใส่ Due Date', 'error');
     if (dueDate <= issueDate) return App.toast('Due Date ต้องหลังจาก Issue Date', 'error');
+    // Credit Note validation
+    if (s3f.hasCN) {
+      if (!(document.getElementById('s3f-cn-no')?.value?.trim())) return App.toast('กรุณาใส่ Credit Note No', 'error');
+      if (!(parseFloat(document.getElementById('s3f-cn-amt')?.value) > 0)) return App.toast('กรุณาใส่ Credit Note Amount', 'error');
+    }
     const btn = document.getElementById('s3f-save'); if (btn) btn.disabled = true;
     try {
       await API.saveInvoice({
@@ -542,6 +578,9 @@ const Scr2 = (() => {
         note: document.getElementById('s3f-note')?.value,
         photo_url: s3f.photoUrl,
         invoice_id: s3f.id,
+        has_credit_note: s3f.hasCN,
+        credit_note_no: s3f.hasCN ? (document.getElementById('s3f-cn-no')?.value?.trim() || '') : null,
+        credit_note_amount: s3f.hasCN ? (document.getElementById('s3f-cn-amt')?.value || '0') : '0',
       });
       App.toast('บันทึกสำเร็จ', 'success');
       App.go('invoice');
@@ -715,7 +754,7 @@ const Scr2 = (() => {
     // S2
     renderS2, loadS2, s2Nav, s2ShowPopup, s2SetPm, s2CalcTotal, s2HandlePhoto, s2Save, s2Delete, s2ConfirmDelete,
     // S3
-    renderS3List, loadS3List, s3Reload, s3LoadMore, s3fCalc, s3fDateChange, s3fHandlePhoto, s3fSave,
+    renderS3List, loadS3List, s3Reload, s3LoadMore, s3fCalc, s3fDateChange, s3fCnToggle, s3fHandlePhoto, s3fSave,
     renderS3Form, loadS3Form,
     // S4
     renderS4, loadS4, s4Nav, s4Check, s4HandlePhoto, s4Submit, s4Confirm,

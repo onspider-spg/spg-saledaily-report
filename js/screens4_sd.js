@@ -1,5 +1,5 @@
 /**
- * Version 1.2 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.2.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
@@ -13,6 +13,14 @@ const Scr4 = (() => {
 
   function toolbar(title) {
     return `<div class="toolbar"><button class="toolbar-back" onclick="App.go('dashboard')">←</button><div class="toolbar-title">${title}</div></div>`;
+  }
+
+  // ─── Guard: force select store (not ALL) ───
+  function needStore(containerId) {
+    if (API.getStore() && API.getStore() !== 'ALL') return false;
+    const el = document.getElementById(containerId);
+    if (el) el.innerHTML = '<div class="alert alert-info" style="text-align:center">⚠️ กรุณาเลือกร้านก่อน (ห้ามเลือก "ทุกร้าน")</div>';
+    return true;
   }
 
   // ═══════════════════════════════════════════
@@ -33,6 +41,7 @@ const Scr4 = (() => {
   }
 
   async function loadAccReview() {
+    if (needStore('ar-table')) return;
     if (_busy.ar) return; _busy.ar = true;
     try {
       const data = await API.getAccReview();
@@ -133,6 +142,7 @@ const Scr4 = (() => {
   }
 
   async function loadChannels() {
+    if (needStore('ch-table')) return;
     if (_busy.ch) return; _busy.ch = true;
     try {
       const data = await API.adminGetChannels();
@@ -216,6 +226,7 @@ const Scr4 = (() => {
   }
 
   async function loadVendors() {
+    if (needStore('vn-table')) return;
     if (_busy.vn) return; _busy.vn = true;
     try {
       const data = await API.adminGetSuppliers();
@@ -287,6 +298,7 @@ const Scr4 = (() => {
   }
 
   async function loadConfig() {
+    if (needStore('cfg-form')) return;
     if (_busy.cfg) return; _busy.cfg = true;
     try {
       const data = await API.adminGetSettings();

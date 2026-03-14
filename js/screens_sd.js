@@ -1,5 +1,5 @@
 /**
- * Version 1.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens_sd.js — Dashboard T1 Admin + T4 Store
@@ -154,14 +154,18 @@ const Scr = (() => {
     // Cash variance
     if (cashEl) {
       if (cashData?.days?.length) {
-        cashEl.className = 'card';
-        cashEl.style.height = 'auto';
-        cashEl.innerHTML = `<div class="sl" style="margin-top:0">💰 Cash Variance (7 วัน)</div>
-          <div style="font-size:11px;line-height:2;color:var(--t2)">${cashData.days.map(d => {
-            const label = d.day_label || d.date;
-            if (d.matched) return `${label}: <span style="color:var(--g)">✓ Match</span>`;
-            return `${label}: <span style="color:var(--r)">${fm(d.variance || 0)}</span>`;
-          }).join(' · ')}</div>`;
+        const isAll = API.getStore() === 'ALL';
+        const filtered = isAll ? cashData.days.filter(d => !d.matched) : cashData.days;
+        if (filtered.length) {
+          cashEl.className = 'card';
+          cashEl.style.height = 'auto';
+          cashEl.innerHTML = `<div class="sl" style="margin-top:0">💰 Cash Variance${isAll ? ' (mismatch only)' : ' (7 วัน)'}</div>
+            <div style="font-size:11px;line-height:2;color:var(--t2)">${filtered.map(d => {
+              const label = isAll ? `${d.store_id} ${d.day_label || d.date}` : (d.day_label || d.date);
+              if (d.matched) return `${label}: <span style="color:var(--g)">✓ Match</span>`;
+              return `${label}: <span style="color:var(--r)">${fm(d.variance || 0)}</span>`;
+            }).join(' · ')}</div>`;
+        } else { cashEl.innerHTML = ''; cashEl.className = ''; cashEl.style.height = '0'; }
       } else { cashEl.innerHTML = ''; cashEl.className = ''; cashEl.style.height = '0'; }
     }
 

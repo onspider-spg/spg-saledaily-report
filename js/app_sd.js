@@ -1,5 +1,5 @@
 /**
- * Version 1.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.2 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -34,11 +34,11 @@ const App = (() => {
     'invoice':        { render: () => Scr2.renderS3List(),          onLoad: () => Scr2.loadS3List() },
     'invoice-form':   { render: (p) => Scr2.renderS3Form(p),       onLoad: (p) => Scr2.loadS3Form(p) },
     'cash':           { render: () => Scr2.renderS4(),              onLoad: () => Scr2.loadS4() },
-    'sale-history':   { render: () => renderPlaceholder('Sale History — S5'), onLoad: null },
-    'expense-history':{ render: () => renderPlaceholder('Expense History — S6'), onLoad: null },
-    'daily-report':   { render: () => renderPlaceholder('Daily Report — S8'), onLoad: null },
-    'tasks':          { render: () => renderPlaceholder('Tasks'), onLoad: null },
-    'daily-hub':      { render: () => renderPlaceholder('Daily Hub'), onLoad: null },
+    'sale-history':   { render: () => Scr3.renderS5(),              onLoad: () => Scr3.loadS5(true) },
+    'expense-history':{ render: () => Scr3.renderS6(),              onLoad: () => Scr3.loadS6(true) },
+    'daily-report':   { render: () => Scr3.renderS8(),              onLoad: () => Scr3.loadS8() },
+    'tasks':          { render: () => Scr3.renderTasks(),            onLoad: () => Scr3.loadTasks() },
+    'daily-hub':      { render: () => Scr3.renderDH(),              onLoad: () => Scr3.loadDH() },
     'acc-review':     { render: () => renderPlaceholder('Account Review'), onLoad: null },
     'channels':       { render: () => renderPlaceholder('Channels'), onLoad: null },
     'vendors':        { render: () => renderPlaceholder('Vendors'), onLoad: null },

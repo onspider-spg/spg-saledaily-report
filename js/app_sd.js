@@ -1,5 +1,5 @@
 /**
- * Version 1.6 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.7 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -36,7 +36,7 @@ const App = (() => {
     'cash':           { render: () => Scr2.renderS4(),              onLoad: () => Scr2.loadS4() },
     'sale-history':   { render: () => Scr3.renderS5(),              onLoad: () => Scr3.loadS5(true) },
     'expense-history':{ render: () => Scr3.renderS6(),              onLoad: () => Scr3.loadS6(true) },
-    'daily-report':   { render: () => Scr3.renderS8(),              onLoad: () => Scr3.loadS8() },
+    'daily-report':   { render: (p) => Scr3.renderS8(p),             onLoad: (p) => Scr3.loadS8(p) },
     'tasks':          { render: () => Scr3.renderTasks(),            onLoad: () => Scr3.loadTasks() },
     'daily-hub':      { render: () => Scr3.renderDH(),              onLoad: () => Scr3.loadDH() },
     'acc-review':     { render: () => Scr4.renderAccReview(),       onLoad: () => Scr4.loadAccReview() },

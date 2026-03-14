@@ -1,5 +1,5 @@
 /**
- * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
@@ -298,14 +298,17 @@ const Scr4 = (() => {
   // ═══════════════════════════════════════════
   // USER ACCESS — Permission matrix (18 × 7)
   // ═══════════════════════════════════════════
-  let ua = { perms: [], changes: [] };
+  let ua = { perms: [], changes: [], original: [] };
 
   function renderAccess() {
     return `${toolbar('User Access')}
     <div class="content" id="ua-content">
-      <div style="font-size:11px;color:var(--t3);margin-bottom:10px">18 functions × 7 tiers — Tap to toggle (T1/T2 only)</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px">18 functions × 7 tiers — ติ๊ก checkbox แล้วกด Save (T1/T2 only)</div>
       <div id="ua-table"><div class="skeleton sk-card" style="height:300px"></div></div>
-      <div style="margin-top:10px"><button class="btn btn-gold" id="ua-save" onclick="Scr4.uaSave()" style="display:none">💾 Save Changes</button></div>
+      <div style="display:flex;gap:8px;margin-top:10px" id="ua-actions" style="display:none">
+        <button class="btn btn-gold" id="ua-save" onclick="Scr4.uaSave()">💾 Save Permissions</button>
+        <button class="btn btn-outline" id="ua-reset" onclick="Scr4.uaReset()">↩ Reset</button>
+      </div>
     </div>`;
   }
 
@@ -314,8 +317,10 @@ const Scr4 = (() => {
     try {
       const data = await API.adminGetPermissions();
       ua.perms = data.permissions || [];
+      ua.original = JSON.parse(JSON.stringify(ua.perms)); // snapshot for reset
       ua.changes = [];
       fillAccess();
+      toggleUaButtons();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
     finally { _busy.ua = false; }
   }
@@ -324,7 +329,6 @@ const Scr4 = (() => {
     const el = document.getElementById('ua-table');
     if (!el || !ua.perms.length) return;
 
-    // Group by function_key
     const groups = {};
     ua.perms.forEach(p => {
       if (!groups[p.function_key]) groups[p.function_key] = { name: p.function_name, group: p.function_group, tiers: {} };
@@ -337,13 +341,12 @@ const Scr4 = (() => {
     for (const [key, fn] of Object.entries(groups)) {
       if (fn.group !== lastGroup) {
         lastGroup = fn.group;
-        rows += `<tr><td colspan="8" style="background:var(--gbg);font-size:10px;font-weight:700;color:var(--g);padding:6px 8px;text-transform:uppercase">${e(fn.group)}</td></tr>`;
+        rows += `<tr class="section-row"><td colspan="8">${e(fn.group.toUpperCase())}</td></tr>`;
       }
       rows += `<tr><td><div style="font-weight:600;font-size:11px">${e(fn.name)}</div><div style="font-size:9px;color:var(--t4)">${e(key)}</div></td>`;
       tiers.forEach(t => {
-        const allowed = fn.tiers[t];
-        const icon = allowed ? '<span style="color:var(--g);font-size:14px;cursor:pointer">✅</span>' : '<span style="color:var(--t4);cursor:pointer">—</span>';
-        rows += `<td style="text-align:center" onclick="Scr4.uaToggle('${key}','${t}')">${icon}</td>`;
+        const checked = fn.tiers[t] ? 'checked' : '';
+        rows += `<td style="text-align:center"><input type="checkbox" class="ua-cb" data-key="${key}" data-tier="${t}" ${checked} onchange="Scr4.uaToggle('${key}','${t}',this.checked)"></td>`;
       });
       rows += '</tr>';
     }
@@ -351,26 +354,43 @@ const Scr4 = (() => {
     el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:140px">Function</th>${tiers.map(t => `<th>${t}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
-  function uaToggle(key, tier) {
+  function uaToggle(key, tier, checked) {
     const p = ua.perms.find(x => x.function_key === key && x.tier_id === tier);
     if (!p) return;
-    p.is_allowed = !p.is_allowed;
-    // Track change
+    p.is_allowed = checked;
     const existing = ua.changes.findIndex(c => c.function_key === key && c.tier_id === tier);
     if (existing >= 0) ua.changes.splice(existing, 1);
-    ua.changes.push({ function_key: key, tier_id: tier, is_allowed: p.is_allowed });
+    // Only track if different from original
+    const orig = ua.original.find(x => x.function_key === key && x.tier_id === tier);
+    if (orig && orig.is_allowed !== checked) {
+      ua.changes.push({ function_key: key, tier_id: tier, is_allowed: checked });
+    }
+    toggleUaButtons();
+  }
+
+  function toggleUaButtons() {
+    const el = document.getElementById('ua-actions');
+    if (el) el.style.display = ua.changes.length > 0 ? 'flex' : 'none';
+  }
+
+  function uaReset() {
+    ua.perms = JSON.parse(JSON.stringify(ua.original));
+    ua.changes = [];
     fillAccess();
-    document.getElementById('ua-save').style.display = ua.changes.length > 0 ? '' : 'none';
+    toggleUaButtons();
+    App.toast('Reset แล้ว', 'info');
   }
 
   async function uaSave() {
     if (!ua.changes.length) return;
+    const cnt = ua.changes.length;
     const btn = document.getElementById('ua-save'); if (btn) btn.disabled = true;
     try {
       await API.adminBatchUpdatePermissions(ua.changes);
+      ua.original = JSON.parse(JSON.stringify(ua.perms)); // update snapshot
       ua.changes = [];
-      document.getElementById('ua-save').style.display = 'none';
-      App.toast(`อัพเดท ${ua.changes.length || 'all'} permissions สำเร็จ`, 'success');
+      toggleUaButtons();
+      App.toast(`อัพเดท ${cnt} permissions สำเร็จ`, 'success');
     } catch (err) { App.toast(err.message || 'อัพเดทไม่สำเร็จ', 'error'); }
     finally { if (btn) btn.disabled = false; }
   }
@@ -448,7 +468,7 @@ const Scr4 = (() => {
     renderChannels, loadChannels, chToggle, chAdd, chSaveNew,
     renderVendors, loadVendors, vnSearch, vnToggle, vnAdd, vnSaveNew,
     renderConfig, loadConfig, cfgSave,
-    renderAccess, loadAccess, uaToggle, uaSave,
+    renderAccess, loadAccess, uaToggle, uaSave, uaReset,
     renderAudit, auLoad, auLoadMore,
   };
 })();

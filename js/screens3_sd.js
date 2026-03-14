@@ -1,5 +1,5 @@
 /**
- * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -147,7 +147,8 @@ const Scr3 = (() => {
   // ═══════════════════════════════════════════
   let s8 = { date: '', tab: 'overview', report: null, incidents: [], leftovers: [], tasks: [], summary: null };
 
-  function renderS8() {
+  function renderS8(params) {
+    if (params?.date) s8.date = params.date;
     s8.date = s8.date || td();
     return `${toolbar('Daily Report')}
     <div class="content" id="s8-content">
@@ -169,7 +170,8 @@ const Scr3 = (() => {
     </div>`;
   }
 
-  async function loadS8() {
+  async function loadS8(params) {
+    if (params?.date) s8.date = params.date;
     if (_busy.s8) return; _busy.s8 = true;
     try {
       // getDailyReport = report + incidents + leftovers + tasks
@@ -236,13 +238,14 @@ const Scr3 = (() => {
           ${['above','normal','below'].map(t => `<div class="chip${r.traffic === t ? ' on' : ''}" onclick="Scr3.s8Pick('traffic','${t}',this)">${t}</div>`).join('')}
         </div></div>
         <div class="fg"><label class="fl">🧑‍🤝‍🧑 ลูกค้าแต่ละช่วง</label>
-          ${['morning','midday','afternoon','evening','night'].map(p => `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:10px;width:60px;color:var(--t3)">${p}</span><input class="fi" style="flex:1;padding:4px 6px;font-size:11px" id="s8-cust-${p}" value="${r['customer_' + p] || ''}" placeholder="ปกติ / มาก / น้อย"></div>`).join('')}
+          ${['morning','midday','afternoon','evening','night'].map(p => `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:10px;width:60px;color:var(--t3)">${p}</span><textarea class="fi" style="flex:1;padding:4px 6px;font-size:11px;min-height:28px" id="s8-cust-${p}" placeholder="ปกติ / มาก / น้อย">${e(r['customer_' + p] || '')}</textarea></div>`).join('')}
         </div>
         <div class="fg"><label class="fl">📝 Overview Note</label><textarea class="fi" id="s8-note" rows="2">${e(r.overview_note || '')}</textarea></div>
         <div class="fg"><label class="fl">🍞 ขนมปัง/เค้กเหลือ?</label><div class="chips" style="margin:0" id="s8-waste">
           <div class="chip${r.has_waste === false ? ' on' : ''}" onclick="Scr3.s8Pick('waste','no',this)">No</div>
           <div class="chip${r.has_waste === true ? ' on' : ''}" onclick="Scr3.s8Pick('waste','yes',this)">Yes</div>
-        </div></div>
+        </div>
+        <div id="s8-waste-detail" style="margin-top:6px;font-size:11px">${r.has_waste === true ? '<a href="https://onspider-spg.github.io/spg-bakeryorder/#waste" style="color:var(--acc)">📋 เปิด Waste List → BC Order</a>' : r.has_waste === false ? '✅ ไม่มี waste วันนี้' : ''}</div></div>
       </div>`;
   }
 
@@ -301,7 +304,7 @@ const Scr3 = (() => {
       <div style="display:flex;align-items:center;gap:8px">
         <span>${icons[t.type] || '📋'}</span>
         <div style="flex:1"><div style="font-size:12px;font-weight:700;${isDone ? 'text-decoration:line-through;color:var(--t3)' : ''}">${e(t.title)}</div>
-        <div style="font-size:10px;color:var(--t3)">${e(t.type)} · ${t.due_date ? 'Due: ' + t.due_date : ''} ${t.assigned_to ? '· 👤 ' + e(t.assigned_to) : ''}</div></div>
+        <div style="font-size:10px;color:var(--t3)">${e(t.type)}${t.report_date ? ' · จาก Daily Report ' + App.fmtDateShort(t.report_date) : ''}${t.due_date ? ' · Due: ' + App.fmtDateShort(t.due_date) : ''}${t.assigned_to ? ' · 👤 ' + e(t.assigned_to) : ''}</div></div>
         ${canComplete ? `<button class="cnt-btn" style="color:var(--g);border-color:var(--g)" onclick="${fn}('${t.id}','done')">✓</button>` : `<button class="cnt-btn" style="color:var(--o);border-color:var(--o)" onclick="${fn}('${t.id}','pending')">↩</button>`}
       </div>
     </div>`;
@@ -312,7 +315,11 @@ const Scr3 = (() => {
   function s8Pick(field, val, el) {
     if (field === 'weather') _s8Weather = val;
     else if (field === 'traffic') _s8Traffic = val;
-    else if (field === 'waste') _s8Waste = val === 'yes';
+    else if (field === 'waste') {
+      _s8Waste = val === 'yes';
+      const wd = document.getElementById('s8-waste-detail');
+      if (wd) wd.innerHTML = _s8Waste ? '<a href="https://onspider-spg.github.io/spg-bakeryorder/#waste" style="color:var(--acc)">📋 เปิด Waste List → BC Order</a>' : '✅ ไม่มี waste วันนี้';
+    }
     el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
     el.classList.add('on');
   }
@@ -525,6 +532,7 @@ const Scr3 = (() => {
       ${App.renderStoreSelector()}
       <div id="dh-kpi" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
       <div class="sl">📋 รายวัน — กดเลือกดู detail</div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:6px">แสดงย้อนหลัง 7 วัน · วันก่อนหน้าดูที่ Sale History</div>
       <div id="dh-days"><div class="skeleton sk-card"></div></div>
       <div id="dh-detail" style="margin-top:12px"></div>
     </div>`;
@@ -608,6 +616,7 @@ const Scr3 = (() => {
         ${isEditable ? `<div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-primary" style="flex:1" onclick="App.go('daily-sale',{date:'${date}'})">✏️ แก้ยอดขาย</button>
           <button class="btn btn-outline" style="flex:1" onclick="App.go('expense',{date:'${date}'})">✏️ แก้ค่าใช้จ่าย</button>
+          <button class="btn btn-outline" style="flex:1" onclick="App.go('daily-report',{date:'${date}'})">📝 ดูรายงาน</button>
         </div>` : ''}
       </div>`;
     } catch { detailEl.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่ได้</div>'; }

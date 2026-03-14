@@ -1,4 +1,4 @@
-/* Version 1.1 | 15 MAR 2026 | Siam Palette Group */
+/* Version 1.2 | 15 MAR 2026 | Siam Palette Group */
 
 /* ═══ DESIGN TOKENS ═══ */
 :root {
@@ -179,10 +179,11 @@ input, select, textarea, button { font-family:var(--font); }
 .store-pill.on { background:var(--acc); color:#fff; border-color:var(--acc); }
 
 /* ═══ TABLE ═══ */
-.tbl { width:100%; border-collapse:collapse; }
-.tbl th { text-align:left; font-size:10px; font-weight:600; color:var(--t2); padding:6px 8px; background:var(--bg); border-bottom:1px solid var(--bd); white-space:nowrap; }
-.tbl td { padding:6px 8px; border-bottom:1px solid var(--bd2); font-size:11px; }
+.tbl { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--bd); border-radius:var(--rd); overflow:hidden; }
+.tbl th { text-align:left; font-size:10px; font-weight:600; color:var(--t2); padding:6px 8px; background:#fff; border-bottom:1.5px solid var(--bd); white-space:nowrap; }
+.tbl td { padding:6px 8px; border-bottom:1px solid var(--bd2); font-size:11px; background:#fff; }
 .tbl tbody tr:hover { background:var(--bg3); }
+.tbl .section-row td { background:var(--bg3); font-size:10px; font-weight:700; color:var(--acc); padding:6px 8px; text-transform:uppercase; border-top:2px solid var(--acc); }
 
 /* ═══ CHANNEL ROW ═══ */
 .ch-row { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg); border:1px solid var(--bd2); border-radius:var(--rd); margin-bottom:4px; }
@@ -284,6 +285,12 @@ input, select, textarea, button { font-family:var(--font); }
 /* ═══ COUNTER BUTTON (incidents/tasks) ═══ */
 .cnt-btn { width:28px; height:28px; border-radius:50%; border:1.5px solid var(--bd); background:var(--bg); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--font); flex-shrink:0; }
 .cnt-btn:active { background:var(--bg3); }
+
+/* ═══ UA CHECKBOX ═══ */
+.ua-cb { width:18px; height:18px; accent-color:var(--acc); cursor:pointer; }
+
+/* ═══ TEXTAREA auto-expand (GR-08) ═══ */
+textarea.fi { resize:vertical; min-height:36px; width:100%; box-sizing:border-box; }
 
 /* ═══ RESPONSIVE ═══ */
 @media (max-width:768px) {

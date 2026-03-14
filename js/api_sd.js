@@ -1,5 +1,5 @@
 /**
- * Version 1.0 | 14 MAR 2026 | Siam Palette Group
+ * Version 1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * api_sd.js — API Client + Token + Session
@@ -151,6 +151,7 @@ const API = (() => {
     getDailyDetail:  (sid, d)  => post('sd_get_daily_detail', tokenBody({ store_id: sid || getStore(), detail_date: d })),
     // Admin
     syncDay:         (sid, d)  => post('sd_sync_day', tokenBody({ store_id: sid || getStore(), sync_date: d })),
+    unlockDay:       (sid, d)  => post('sd_unlock_day', tokenBody({ store_id: sid || getStore(), sync_date: d })),
     getAccReview:    (sid)     => post('sd_get_acc_review', tokenBody({ store_id: sid || getStore() })),
     adminGetChannels:    (sid) => post('sd_admin_get_channels', tokenBody({ store_id: sid || getStore() })),
     adminCreateChannel:  (d)   => post('sd_admin_create_channel', tokenBody(d)),

@@ -1,5 +1,5 @@
 /**
- * Version 1.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.2 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
@@ -47,16 +47,23 @@ const Scr4 = (() => {
     const el = document.getElementById('ar-table');
     if (!el) return;
     if (!ar.days.length) { el.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>'; return; }
+    const isT1 = (App.S.session?.tier_level || 99) <= 1;
 
     el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Date</th><th>Sales</th><th>Expense</th><th>Status</th><th></th></tr></thead>
     <tbody>${ar.days.map(d => {
       const synced = d.sync_status === 'synced';
+      let actionCol;
+      if (synced) {
+        actionCol = `<span style="font-size:10px;color:var(--t4)">${d.sync_method || ''}</span>${isT1 ? ` <button class="btn btn-outline btn-sm" style="font-size:9px;color:var(--o);border-color:var(--o);margin-left:4px" onclick="Scr4.arUnlock('${d.sale_date}')">🔓 Unlock</button>` : ''}`;
+      } else {
+        actionCol = `<button class="btn btn-primary btn-sm" onclick="Scr4.arSync('${d.sale_date}')">🔒 Sync</button>`;
+      }
       return `<tr${synced ? ' style="background:var(--bg3)"' : ''}>
         <td style="font-weight:600${synced ? ';color:var(--t3)' : ''}">${App.fmtDate(d.sale_date).substring(0, 10)}</td>
         <td${synced ? ' style="color:var(--t3)"' : ''}>${fm(d.total_sales)}</td>
         <td${synced ? ' style="color:var(--t3)"' : ''}>${fm(d.total_expense)}</td>
         <td>${synced ? '<span class="sts sts-lock">🔒 Synced</span>' : '<span class="sts sts-ok">✏️ Editable</span>'}</td>
-        <td>${synced ? `<span style="font-size:10px;color:var(--t4)">${d.sync_method || ''}</span>` : `<button class="btn btn-primary btn-sm" onclick="Scr4.arSync('${d.sale_date}')">🔒 Sync</button>`}</td>
+        <td>${actionCol}</td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
   }
@@ -83,6 +90,27 @@ const Scr4 = (() => {
       if (d) { d.sync_status = 'synced'; d.sync_method = 'manual'; }
       fillAccReview();
     } catch (err) { App.toast(err.message || 'Sync ไม่สำเร็จ', 'error'); }
+    finally { if (btn) btn.disabled = false; }
+  }
+
+  async function arUnlock(date) {
+    App.showDialog({
+      title: '🔓 Unlock วันที่ ' + App.fmtDate(date).substring(0, 10),
+      body: `<div style="font-size:12px;color:var(--t2);margin-bottom:10px">⚠️ T1 Only — ข้อมูลจะกลับเป็น Editable<br>ถ้า Finance sync ไปแล้ว unlock ไม่ได้</div>
+        <button class="btn btn-outline btn-full" id="ar-unlock-btn" style="color:var(--o);border-color:var(--o)" onclick="Scr4.arConfirmUnlock('${date}')">🔓 ยืนยัน Unlock</button>`,
+    });
+  }
+
+  async function arConfirmUnlock(date) {
+    const btn = document.getElementById('ar-unlock-btn'); if (btn) btn.disabled = true;
+    try {
+      await API.unlockDay(API.getStore(), date);
+      App.closeDialog();
+      App.toast('Unlock สำเร็จ — แก้ไขได้แล้ว', 'success');
+      const d = ar.days.find(x => x.sale_date === date);
+      if (d) { d.sync_status = 'editable'; d.sync_method = null; }
+      fillAccReview();
+    } catch (err) { App.toast(err.message || 'Unlock ไม่ได้', 'error'); }
     finally { if (btn) btn.disabled = false; }
   }
 
@@ -464,7 +492,7 @@ const Scr4 = (() => {
 
   // ═══ PUBLIC ═══
   return {
-    renderAccReview, loadAccReview, arSync, arConfirmSync,
+    renderAccReview, loadAccReview, arSync, arConfirmSync, arUnlock, arConfirmUnlock,
     renderChannels, loadChannels, chToggle, chAdd, chSaveNew,
     renderVendors, loadVendors, vnSearch, vnToggle, vnAdd, vnSaveNew,
     renderConfig, loadConfig, cfgSave,

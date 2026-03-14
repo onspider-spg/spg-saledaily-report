@@ -1,5 +1,5 @@
 /**
- * Version 1.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -287,12 +287,42 @@ const Scr3 = (() => {
     const pending = s8.tasks.filter(t => t.status === 'pending');
     const done = s8.tasks.filter(t => t.status === 'done');
 
-    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="sl" style="margin:0">📋 Tasks (${s8.tasks.length})</div>
+    // Equipment repairs for selected date
+    const repairs = s8.tasks.filter(t => t.type === 'equipment' && t.report_date === s8.date);
+    const priTags = { critical: 'tag-r', urgent: 'tag-o', normal: 'tag-b', low: 'tag-gray' };
+
+    const repairSection = `<div class="card" style="border-left:3px solid var(--o);margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:700">🔧 แจ้งซ่อมอุปกรณ์</div>
+        <button class="btn btn-outline btn-sm" style="color:var(--o);border-color:var(--o)" onclick="Scr3.s8NewRepair()">+แจ้งซ่อม</button>
+      </div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:6px">📅 ${App.fmtDate(s8.date)}</div>
+      ${repairs.length ? repairs.map(r => {
+        const isDone = r.status === 'done';
+        const tagCls = priTags[r.priority] || 'tag-gray';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--bd2)">
+          <span>🔧</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:600;${isDone ? 'text-decoration:line-through;color:var(--t3)' : ''}">${e(r.title)}</div>
+            ${r.note ? `<div style="font-size:10px;color:var(--t3)">${e(r.note)}</div>` : ''}
+          </div>
+          <span class="tag ${tagCls}" style="font-size:8px">${e(r.priority)}</span>
+          ${isDone ? '<span style="font-size:10px;color:var(--g)">✅</span>' : `<button class="cnt-btn" style="color:var(--g);border-color:var(--g)" onclick="Scr3.s8ToggleTask('${r.id}','done')">✓</button>`}
+        </div>`;
+      }).join('') : '<div style="font-size:11px;color:var(--t3);padding:4px 0">ไม่มีรายการแจ้งซ่อมวันนี้</div>'}
+    </div>`;
+
+    // Non-equipment tasks
+    const pendingOther = pending.filter(t => !(t.type === 'equipment' && t.report_date === s8.date));
+    const doneOther = done.filter(t => !(t.type === 'equipment' && t.report_date === s8.date));
+
+    el.innerHTML = `${repairSection}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="sl" style="margin:0">📋 Tasks (${pendingOther.length + doneOther.length})</div>
         <button class="btn btn-primary btn-sm" onclick="Scr3.s8NewTask()">+ New</button>
       </div>
-      ${pending.map(t => taskCard(t, true)).join('')}
-      ${done.length ? `<div class="sl">✅ Done</div>${done.map(t => taskCard(t, false)).join('')}` : ''}`;
+      ${pendingOther.map(t => taskCard(t, true)).join('')}
+      ${doneOther.length ? `<div class="sl">✅ Done</div>${doneOther.map(t => taskCard(t, false)).join('')}` : ''}`;
   }
 
   function taskCard(t, canComplete, toggleFn) {
@@ -377,6 +407,53 @@ const Scr3 = (() => {
       fillS8Tab();
       App.toast('สร้าง Task สำเร็จ', 'success');
     } catch (err) { App.toast(err.message || 'สร้างไม่สำเร็จ', 'error'); }
+    finally { if (btn) btn.disabled = false; }
+  }
+
+  // ─── S8-07: Equipment Repair ───
+  let _repairUrgency = 'normal';
+
+  function s8NewRepair() {
+    _repairUrgency = 'normal';
+    App.showDialog(`<div class="popup-sheet" style="width:360px">
+      <div class="popup-header"><div class="popup-title">🔧 แจ้งซ่อมอุปกรณ์</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:8px">📅 ${App.fmtDate(s8.date)}</div>
+      <div class="fg"><label class="fl">ชื่อเครื่อง/อุปกรณ์ <span class="req">*</span></label><input class="fi" id="rp-name" placeholder="เช่น เครื่องปั่น, ตู้เย็น"></div>
+      <div class="fg"><label class="fl">อาการ/ปัญหา</label><textarea class="fi" id="rp-symptom" rows="2" placeholder="เช่น มีเสียงดัง, ไม่เย็น"></textarea></div>
+      <div class="fg"><label class="fl">ความเร่งด่วน</label><div class="chips" style="margin:0" id="rp-urgency">
+        <div class="chip" onclick="Scr3.s8SetUrgency('low',this)">Low</div>
+        <div class="chip on" onclick="Scr3.s8SetUrgency('normal',this)">Normal</div>
+        <div class="chip" onclick="Scr3.s8SetUrgency('urgent',this)">Urgent</div>
+        <div class="chip" onclick="Scr3.s8SetUrgency('critical',this)">Critical</div>
+      </div></div>
+      <button class="btn btn-gold btn-full" id="rp-save" onclick="Scr3.s8SaveRepair()">💾 แจ้งซ่อม</button>
+    </div>`);
+  }
+
+  function s8SetUrgency(val, el) {
+    _repairUrgency = val;
+    el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    el.classList.add('on');
+  }
+
+  async function s8SaveRepair() {
+    const name = document.getElementById('rp-name')?.value?.trim();
+    if (!name) return App.toast('กรุณาใส่ชื่อเครื่อง/อุปกรณ์', 'error');
+    const btn = document.getElementById('rp-save'); if (btn) btn.disabled = true;
+    try {
+      const data = await API.createTask({
+        store_id: API.getStore(),
+        title: name,
+        type: 'equipment',
+        priority: _repairUrgency,
+        note: document.getElementById('rp-symptom')?.value || null,
+        report_date: s8.date,
+      });
+      s8.tasks.push(data);
+      App.closeDialog();
+      fillS8Tab();
+      App.toast('แจ้งซ่อมสำเร็จ', 'success');
+    } catch (err) { App.toast(err.message || 'แจ้งซ่อมไม่สำเร็จ', 'error'); }
     finally { if (btn) btn.disabled = false; }
   }
 
@@ -630,7 +707,9 @@ const Scr3 = (() => {
     renderS6, loadS6, s6SetFilter, s6LoadMore,
     renderS8, loadS8, s8Nav, s8SetTab, s8Pick, s8IncChange,
     s8LeftUpdate, s8LeftRemove, s8AddLeftover,
-    s8ToggleTask, s8NewTask, s8SaveNewTask, s8Save, s8Copy,
+    s8ToggleTask, s8NewTask, s8SaveNewTask,
+    s8NewRepair, s8SetUrgency, s8SaveRepair,
+    s8Save, s8Copy,
     renderTasks, loadTasks, tkFilter, tkNewTask, tkSaveNew, tkToggle,
     renderDH, loadDH, dhSelect,
   };

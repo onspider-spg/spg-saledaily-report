@@ -1,5 +1,5 @@
 /**
- * Version 1.3 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.4 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -11,6 +11,23 @@
 const Scr3 = (() => {
   const e = App.esc, fm = App.fmtMoney, fms = App.fmtMoneyShort, td = App.todayStr;
   const _busy = {}; // in-flight guard
+
+  // ═══ CONSTANTS ═══
+  const INCIDENT_CATS = [
+    { key: 'food_quality', icon: '🍽️', name: 'Food Quality', desc: 'รสชาติเปลี่ยน, ไม่อร่อย, texture ผิดปกติ' },
+    { key: 'contamination', icon: '🦠', name: 'Contamination', desc: 'ผมในอาหาร, เศษวัตถุ, แมลง' },
+    { key: 'service_delay', icon: '⏱️', name: 'Service Delay', desc: 'ออเดอร์ช้า, คิวยาว, ลูกค้ารอนาน' },
+    { key: 'wrong_order', icon: '🔄', name: 'Wrong Order', desc: 'เสิร์ฟผิดเมนู, ผิดตัวเลือก' },
+    { key: 'complaint', icon: '💢', name: 'Customer Complaint', desc: 'บ่นโดยตรง, ขอคืนเงิน, Review' },
+    { key: 'waste', icon: '🗑️', name: 'Waste / เหลือผิดปกติ', desc: 'เมนูเหลือเยอะ, ทิ้งบ่อย' },
+    { key: 'staff', icon: '👤', name: 'Staff Issue', desc: 'ขาดคน, ไม่แจ้งออก, พฤติกรรม' },
+  ];
+  const LEVEL_OPTS = [
+    { key: 'little', label: '🟢 นิดหน่อย' },
+    { key: 'half', label: '🟡 ครึ่งนึง' },
+    { key: 'almost_full', label: '🔴 เกือบหมด' },
+    { key: 'full', label: '⚫ ทั้งจาน' },
+  ];
 
   function toolbar(title) {
     return `<div class="toolbar"><button class="toolbar-back" onclick="App.go('dashboard')">←</button><div class="toolbar-title">${title}</div></div>`;
@@ -216,7 +233,17 @@ const Scr3 = (() => {
         API.getS8Summary(null, s8.date),
       ]);
       s8.report = repData.report;
-      s8.incidents = repData.incidents || [];
+      // Init incidents with notes arrays (V1 pattern)
+      s8.incidents = [];
+      INCIDENT_CATS.forEach(c => {
+        const raw = (repData.incidents || []).find(i => i.category === c.key);
+        const count = raw?.count || 0;
+        let notes = [];
+        if (raw?.notes && Array.isArray(raw.notes)) notes = raw.notes;
+        else if (raw?.note) { try { let p = JSON.parse(raw.note); if (typeof p === 'string') p = JSON.parse(p); if (Array.isArray(p)) notes = p; else notes = [String(p)]; } catch { notes = [raw.note]; } }
+        while (notes.length < count) notes.push('');
+        s8.incidents.push({ category: c.key, count, notes: notes.slice(0, Math.max(count, notes.length)) });
+      });
       s8.leftovers = repData.leftovers || [];
       s8.tasks = repData.tasks || [];
       s8.summary = sumData;
@@ -345,36 +372,64 @@ const Scr3 = (() => {
   }
 
   function fillS8Incidents(el) {
-    const cats = ['food_quality','contamination','service_delay','wrong_order','complaint','waste','staff'];
-    el.innerHTML = `<div class="sl" style="margin-top:0">⚠️ เหตุการณ์</div>
-      ${cats.map(cat => {
-        const inc = s8.incidents.find(i => i.category === cat);
-        const count = inc?.count || 0;
-        return `<div class="card" style="padding:10px;margin-bottom:6px;border-left:3px solid ${count > 0 ? 'var(--gold)' : 'transparent'}">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;font-weight:600">${cat.replace(/_/g, ' ')}</span>
-            <div style="display:flex;align-items:center;gap:6px">
-              <button class="cnt-btn" onclick="Scr3.s8IncChange('${cat}',-1)">−</button>
-              <span style="font-size:14px;font-weight:700;min-width:20px;text-align:center" id="s8-inc-${cat}">${count}</span>
-              <button class="cnt-btn" onclick="Scr3.s8IncChange('${cat}',1)">+</button>
-            </div>
+    let totalCount = 0;
+    const catHtml = INCIDENT_CATS.map(c => {
+      const inc = s8.incidents.find(i => i.category === c.key) || { category: c.key, count: 0, notes: [] };
+      const count = inc.count || 0;
+      totalCount += count;
+      let notesHtml = '';
+      if (count > 0) {
+        for (let i = 0; i < count; i++) {
+          const val = e((inc.notes && inc.notes[i]) || '');
+          notesHtml += `<input class="fi" style="font-size:11px;padding:4px 8px;margin-bottom:4px" placeholder="รายการที่ ${i + 1}: รายละเอียด..." value="${val}" oninput="Scr3.s8IncNote('${c.key}',${i},this.value)">`;
+        }
+      }
+      return `<div class="card" style="padding:10px;margin-bottom:6px;border-left:3px solid ${count > 0 ? 'var(--gold)' : 'transparent'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${c.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600">${c.name}</div>
+            <div style="font-size:10px;color:var(--t3)">${c.desc}</div>
           </div>
-          ${count > 0 ? `<div style="margin-top:6px"><input class="fi" style="font-size:11px;padding:4px 8px" id="s8-inc-note-${cat}" value="${e(inc?.note || '')}" placeholder="Note..."></div>` : ''}
-        </div>`;
-      }).join('')}
-      <div class="sl">🍞 Leftovers</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="cnt-btn" onclick="Scr3.s8IncChange('${c.key}',-1)">−</button>
+            <span style="font-size:14px;font-weight:700;min-width:20px;text-align:center" id="s8-inc-${c.key}">${count}</span>
+            <button class="cnt-btn" onclick="Scr3.s8IncChange('${c.key}',1)">+</button>
+          </div>
+        </div>
+        <div style="margin-top:6px;${count > 0 ? '' : 'display:none'}" id="s8-inc-notes-${c.key}">${notesHtml}</div>
+      </div>`;
+    }).join('');
+
+    // Summary badges
+    const badges = INCIDENT_CATS.filter(c => (s8.incidents.find(i => i.category === c.key)?.count || 0) > 0).map(c => {
+      const inc = s8.incidents.find(i => i.category === c.key);
+      return `<span style="background:var(--gold-bg);color:var(--gold);padding:3px 8px;border-radius:6px;font-size:10px">${c.icon} ${c.name.split(' ')[0]} ×${inc.count}</span>`;
+    }).join('');
+
+    el.innerHTML = `<div class="sl" style="margin-top:0">⚠️ เหตุการณ์ — กดจำนวน + ใส่ note</div>
+      ${catHtml}
+      <div style="margin-top:10px;padding:10px;background:var(--bg3);border-radius:var(--rd);margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;margin-bottom:4px">📊 สรุปเหตุการณ์วันนี้</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px" id="s8-inc-summary">${badges || '<span style="font-size:10px;color:var(--t3)">ไม่มีเหตุการณ์</span>'}</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:4px">รวม <b id="s8-inc-total">${totalCount}</b> เหตุการณ์</div>
+      </div>
+      <div class="sl">🍚 อาหารเหลือ</div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:6px">กรอกรายการอาหารที่เหลือประจำวัน</div>
       <div id="s8-leftovers">${renderLeftovers()}</div>
-      <button class="btn btn-outline btn-sm" onclick="Scr3.s8AddLeftover()">+ เพิ่มรายการ</button>`;
+      <div style="display:flex;align-items:center;gap:6px;padding:8px 0;cursor:pointer;color:var(--gold);font-size:12px;font-weight:600" onclick="Scr3.s8AddLeftover()">➕ เพิ่มรายการ</div>`;
   }
 
   function renderLeftovers() {
-    return s8.leftovers.map((l, i) => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
-      <input class="fi" style="flex:2;font-size:11px;padding:4px 6px" value="${e(l.item_name)}" onchange="Scr3.s8LeftUpdate(${i},'item_name',this.value)">
-      <input class="fi" type="number" style="flex:0 0 40px;font-size:11px;padding:4px 6px" value="${l.quantity}" onchange="Scr3.s8LeftUpdate(${i},'quantity',this.value)">
-      <select class="fi" style="flex:1;font-size:10px;padding:4px" onchange="Scr3.s8LeftUpdate(${i},'level',this.value)">
-        ${['little','half','almost_full','full'].map(v => `<option value="${v}"${l.level === v ? ' selected' : ''}>${v}</option>`).join('')}
-      </select>
-      <button class="cnt-btn" style="color:var(--r);border-color:var(--r)" onclick="Scr3.s8LeftRemove(${i})">✕</button>
+    if (!s8.leftovers.length) return '<div style="text-align:center;padding:10px;color:var(--t3);font-size:11px">ยังไม่มีรายการ — กด ➕ เพิ่ม</div>';
+    return s8.leftovers.map((l, i) => `<div class="card" style="padding:10px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span>🍞</span>
+        <input class="fi" style="flex:1;font-size:12px;padding:4px 6px" value="${e(l.item_name)}" placeholder="ชื่ออาหาร..." oninput="Scr3.s8LeftUpdate(${i},'item_name',this.value)">
+        <input class="fi" type="number" style="width:44px;font-size:12px;padding:4px 6px;text-align:center" value="${l.quantity}" min="0" oninput="Scr3.s8LeftUpdate(${i},'quantity',this.value)">
+        <button class="cnt-btn" style="color:var(--r);border-color:var(--r)" onclick="Scr3.s8LeftRemove(${i})">✕</button>
+      </div>
+      <div class="chips" style="margin:0">${LEVEL_OPTS.map(lv => `<div class="chip${l.level === lv.key ? ' on' : ''}" onclick="Scr3.s8LeftLevel(${i},'${lv.key}',this)">${lv.label}</div>`).join('')}</div>
     </div>`).join('');
   }
 
@@ -462,14 +517,55 @@ const Scr3 = (() => {
 
   function s8IncChange(cat, delta) {
     let inc = s8.incidents.find(i => i.category === cat);
-    if (!inc) { inc = { category: cat, count: 0, note: '' }; s8.incidents.push(inc); }
-    inc.count = Math.max(0, inc.count + delta);
-    fillS8Tab(); // re-render incidents tab
+    if (!inc) { inc = { category: cat, count: 0, notes: [] }; s8.incidents.push(inc); }
+    // Collect current note values from DOM before changing
+    const noteWrap = document.getElementById('s8-inc-notes-' + cat);
+    if (noteWrap) { const inputs = noteWrap.querySelectorAll('input'); inputs.forEach((inp, i) => { if (i < inc.notes.length) inc.notes[i] = inp.value; }); }
+    const newCount = Math.max(0, inc.count + delta);
+    while (inc.notes.length < newCount) inc.notes.push('');
+    if (newCount < inc.notes.length) inc.notes.length = newCount;
+    inc.count = newCount;
+    // Update count display
+    const cntEl = document.getElementById('s8-inc-' + cat);
+    if (cntEl) cntEl.textContent = inc.count;
+    // Re-render note inputs
+    if (noteWrap) {
+      noteWrap.style.display = inc.count > 0 ? '' : 'none';
+      let html = '';
+      for (let i = 0; i < inc.count; i++) {
+        html += `<input class="fi" style="font-size:11px;padding:4px 8px;margin-bottom:4px" placeholder="รายการที่ ${i + 1}: รายละเอียด..." value="${e(inc.notes[i] || '')}" oninput="Scr3.s8IncNote('${cat}',${i},this.value)">`;
+      }
+      noteWrap.innerHTML = html;
+    }
+    s8UpdateIncSummary();
+  }
+
+  function s8IncNote(cat, idx, val) {
+    const inc = s8.incidents.find(i => i.category === cat);
+    if (inc && inc.notes) inc.notes[idx] = val;
+  }
+
+  function s8UpdateIncSummary() {
+    let total = 0;
+    const badges = INCIDENT_CATS.filter(c => (s8.incidents.find(i => i.category === c.key)?.count || 0) > 0).map(c => {
+      const inc = s8.incidents.find(i => i.category === c.key);
+      total += inc.count;
+      return `<span style="background:var(--gold-bg);color:var(--gold);padding:3px 8px;border-radius:6px;font-size:10px">${c.icon} ${c.name.split(' ')[0]} ×${inc.count}</span>`;
+    }).join('');
+    const sumEl = document.getElementById('s8-inc-summary');
+    if (sumEl) sumEl.innerHTML = badges || '<span style="font-size:10px;color:var(--t3)">ไม่มีเหตุการณ์</span>';
+    const totalEl = document.getElementById('s8-inc-total');
+    if (totalEl) totalEl.textContent = total;
   }
 
   function s8LeftUpdate(idx, field, val) { if (s8.leftovers[idx]) s8.leftovers[idx][field] = field === 'quantity' ? parseInt(val) || 1 : val; }
   function s8LeftRemove(idx) { s8.leftovers.splice(idx, 1); document.getElementById('s8-leftovers').innerHTML = renderLeftovers(); }
   function s8AddLeftover() { s8.leftovers.push({ item_name: '', quantity: 1, level: 'half' }); document.getElementById('s8-leftovers').innerHTML = renderLeftovers(); }
+  function s8LeftLevel(idx, level, el) {
+    if (s8.leftovers[idx]) s8.leftovers[idx].level = level;
+    el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    el.classList.add('on');
+  }
 
   async function s8ToggleTask(taskId, newStatus) {
     try {
@@ -568,9 +664,35 @@ const Scr3 = (() => {
     try {
       // Collect incident notes from DOM
       s8.incidents.forEach(inc => {
-        const noteEl = document.getElementById('s8-inc-note-' + inc.category);
-        if (noteEl) inc.note = noteEl.value;
+        const noteWrap = document.getElementById('s8-inc-notes-' + inc.category);
+        if (noteWrap && inc.count > 0) {
+          const inputs = noteWrap.querySelectorAll('input');
+          const notes = [];
+          inputs.forEach(inp => notes.push(inp.value));
+          inc.notes = notes;
+        }
       });
+
+      // Validate: count > 0 → every note must be filled
+      for (const c of INCIDENT_CATS) {
+        const inc = s8.incidents.find(i => i.category === c.key);
+        if (inc && inc.count > 0) {
+          for (let i = 0; i < inc.count; i++) {
+            if (!(inc.notes[i] || '').trim()) {
+              App.toast(`⚠️ กรุณาใส่รายละเอียด "${c.name}" รายการที่ ${i + 1}`, 'error');
+              if (btn) btn.disabled = false;
+              return;
+            }
+          }
+        }
+      }
+
+      // Build incidents payload with note string (pipe-separated) + notes array
+      const incidents = s8.incidents.filter(i => i.count > 0).map(i => ({
+        category: i.category, count: i.count,
+        note: (i.notes || []).filter(n => n).join(' | '),
+        notes: i.notes || [],
+      }));
 
       await API.saveDailyReport({
         store_id: API.getStore(), report_date: s8.date,
@@ -584,7 +706,7 @@ const Scr3 = (() => {
         customer_afternoon: document.getElementById('s8-cust-afternoon')?.value,
         customer_evening: document.getElementById('s8-cust-evening')?.value,
         customer_night: document.getElementById('s8-cust-night')?.value,
-        incidents: s8.incidents.filter(i => i.count > 0),
+        incidents,
         leftovers: s8.leftovers.filter(l => l.item_name),
         is_submitted: true,
       });
@@ -811,8 +933,8 @@ const Scr3 = (() => {
   return {
     renderS5, loadS5, s5Reload, s5LoadMore,
     renderS6, loadS6, s6Reload, s6SetFilter, s6LoadMore,
-    renderS8, loadS8, s8Nav, s8SetTab, s8Pick, s8IncChange,
-    s8LeftUpdate, s8LeftRemove, s8AddLeftover,
+    renderS8, loadS8, s8Nav, s8SetTab, s8Pick, s8IncChange, s8IncNote,
+    s8LeftUpdate, s8LeftRemove, s8AddLeftover, s8LeftLevel,
     s8ToggleTask, s8NewTask, s8SaveNewTask,
     s8NewRepair, s8SetUrgency, s8SaveRepair,
     s8Save, s8Copy,

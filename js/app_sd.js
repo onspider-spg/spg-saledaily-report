@@ -1,5 +1,5 @@
 /**
- * Version 1.4 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -48,6 +48,7 @@ const App = (() => {
   };
 
   // ─── NAVIGATE ───
+  let _onLoadTimer = null;
   function go(route, params = {}) {
     const def = ROUTES[route];
     if (!def) return go('dashboard');
@@ -65,7 +66,9 @@ const App = (() => {
       appEl().innerHTML = def.render(params);
     }
 
-    if (def.onLoad) setTimeout(() => def.onLoad(params), 20);
+    // Cancel previous onLoad before scheduling new one
+    if (_onLoadTimer) { clearTimeout(_onLoadTimer); _onLoadTimer = null; }
+    if (def.onLoad) _onLoadTimer = setTimeout(() => { _onLoadTimer = null; def.onLoad(params); }, 20);
     window.scrollTo(0, 0);
     const ct = document.querySelector('.content');
     if (ct) ct.scrollTop = 0;
@@ -339,7 +342,7 @@ const App = (() => {
       `<div class="store-pill${s.store_id === sel ? ' on' : ''}" onclick="App.selectStore('${s.store_id}')">${esc(s.short || s.store_id)}</div>`
     ).join('')}</div>`;
   }
-  function selectStore(id) { API.setStore(id); go(currentRoute, currentParams); }
+  function selectStore(id) { API.setStore(id); S.dashboard = null; go(currentRoute, currentParams); }
 
   // ═══ INIT ═══
   async function init() {

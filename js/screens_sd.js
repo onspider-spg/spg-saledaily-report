@@ -1,5 +1,5 @@
 /**
- * Version 1.0 | 14 MAR 2026 | Siam Palette Group
+ * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens_sd.js — Dashboard T1 Admin + T4 Store
@@ -9,6 +9,7 @@
 
 const Scr = (() => {
   const e = App.esc, fm = App.fmtMoney, fms = App.fmtMoneyShort;
+  let _dashLoading = false, _adminLoading = false;
 
   // ═══ DASHBOARD ═══
   function renderDashboard() {
@@ -68,7 +69,7 @@ const Scr = (() => {
   // ─── LOAD DASHBOARD (memory first) ───
   async function loadDashboard() {
     const s = App.S.session;
-    if (!s) return;
+    if (!s || _dashLoading) return;
     const isAdmin = (s.tier_level || 99) <= 2;
 
     // Use cached dashboard from initBundle if available
@@ -78,7 +79,8 @@ const Scr = (() => {
       return;
     }
 
-    // Fallback: fetch dashboard
+    // Fetch dashboard (cache was cleared or first load)
+    _dashLoading = true;
     try {
       const data = await API.getDashboard();
       App.S.dashboard = data;
@@ -86,7 +88,7 @@ const Scr = (() => {
       if (isAdmin) loadAdminWidgets();
     } catch (err) {
       App.toast('โหลด Dashboard ไม่ได้', 'error');
-    }
+    } finally { _dashLoading = false; }
   }
 
   // ─── FILL KPI ───
@@ -118,6 +120,8 @@ const Scr = (() => {
 
   // ─── ADMIN WIDGETS (parallel fetch) ───
   async function loadAdminWidgets() {
+    if (_adminLoading) return;
+    _adminLoading = true;
     const chartEl = document.getElementById('dash-chart');
     const cashEl = document.getElementById('dash-cash');
     const anomalyEl = document.getElementById('dash-anomaly');
@@ -186,6 +190,7 @@ const Scr = (() => {
         </div>`;
       } else { storesEl.innerHTML = ''; }
     }
+    _adminLoading = false;
   }
 
   // ═══ HELPERS ═══

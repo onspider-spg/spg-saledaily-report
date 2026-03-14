@@ -1,5 +1,5 @@
 /**
- * Version 1.0 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -10,6 +10,7 @@
 
 const Scr3 = (() => {
   const e = App.esc, fm = App.fmtMoney, fms = App.fmtMoneyShort, td = App.todayStr;
+  const _busy = {}; // in-flight guard
 
   function toolbar(title) {
     return `<div class="toolbar"><button class="toolbar-back" onclick="App.go('dashboard')">←</button><div class="toolbar-title">${title}</div></div>`;
@@ -34,6 +35,7 @@ const Scr3 = (() => {
 
   async function loadS5(reset) {
     if (reset) { s5.records = []; s5.offset = 0; }
+    if (_busy.s5) return; _busy.s5 = true;
     try {
       const data = await API.getSaleHistory({ days: 30, limit: 10, offset: s5.offset });
       const newRecs = data.records || [];
@@ -41,6 +43,7 @@ const Scr3 = (() => {
       fillS5();
       document.getElementById('s5-more').style.display = newRecs.length >= 10 ? '' : 'none';
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.s5 = false; }
   }
 
   function fillS5() {
@@ -98,12 +101,14 @@ const Scr3 = (() => {
 
   async function loadS6(reset) {
     if (reset) { s6.expenses = []; s6.invoices = []; s6.offset = 0; }
+    if (_busy.s6) return; _busy.s6 = true;
     try {
       const data = await API.getExpenseHistory({ days: 30, limit: 10, offset: s6.offset, filter: s6.filter });
       if (s6.offset === 0) { s6.expenses = data.expenses || []; s6.invoices = data.invoices || []; }
       else { s6.expenses = [...s6.expenses, ...(data.expenses || [])]; s6.invoices = [...s6.invoices, ...(data.invoices || [])]; }
       fillS6();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.s6 = false; }
   }
 
   function fillS6() {
@@ -165,7 +170,11 @@ const Scr3 = (() => {
   }
 
   async function loadS8() {
+    if (_busy.s8) return; _busy.s8 = true;
     try {
+      // getDailyReport = report + incidents + leftovers + tasks
+      // getDailyDetail = sale + channels + expenses + cash (for overview tab)
+      // Both run parallel — report field overlaps but data is different
       const [repData, sumData] = await Promise.all([
         API.getDailyReport(null, s8.date),
         API.getS8Summary(null, s8.date),
@@ -177,6 +186,7 @@ const Scr3 = (() => {
       s8.summary = sumData;
       fillS8Tab();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.s8 = false; }
   }
 
   function s8Nav(delta) {
@@ -430,11 +440,13 @@ const Scr3 = (() => {
   }
 
   async function loadTasks() {
+    if (_busy.tk) return; _busy.tk = true;
     try {
       const data = await API.getTasks(API.getStore());
       tk.tasks = data.tasks || [];
       fillTasks();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.tk = false; }
   }
 
   function fillTasks() {
@@ -519,6 +531,7 @@ const Scr3 = (() => {
   }
 
   async function loadDH() {
+    if (_busy.dh) return; _busy.dh = true;
     try {
       const data = await API.getDailyHub();
       dh.days = data.days || [];
@@ -527,6 +540,7 @@ const Scr3 = (() => {
       fillDH();
       if (dh.days.length) dhSelect(dh.days[0].date);
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.dh = false; }
   }
 
   function fillDH() {
@@ -558,15 +572,11 @@ const Scr3 = (() => {
 
   async function dhSelect(date) {
     dh.selectedDate = date;
-    // Highlight selected
-    document.querySelectorAll('#dh-days .card').forEach(c => {
-      const isActive = c.onclick?.toString().includes(date);
-      c.style.borderLeftColor = isActive ? 'var(--acc)' : 'transparent';
-    });
     fillDH(); // re-highlight
 
     const detailEl = document.getElementById('dh-detail');
     if (!detailEl) return;
+    if (_busy.dhDetail) return; _busy.dhDetail = true;
     detailEl.innerHTML = '<div class="skeleton sk-card" style="height:200px"></div>';
 
     try {
@@ -601,6 +611,7 @@ const Scr3 = (() => {
         </div>` : ''}
       </div>`;
     } catch { detailEl.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่ได้</div>'; }
+    finally { _busy.dhDetail = false; }
   }
 
 

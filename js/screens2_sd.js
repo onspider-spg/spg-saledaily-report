@@ -1,5 +1,5 @@
 /**
- * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -10,6 +10,7 @@
 
 const Scr2 = (() => {
   const e = App.esc, fm = App.fmtMoney, td = App.todayStr;
+  const _busy = {}; // in-flight guard: _busy.s1, _busy.s2, etc.
 
   // ═══ SHARED: Date Bar ═══
   function dateBar(id, date, onChange) {
@@ -69,6 +70,7 @@ const Scr2 = (() => {
 
   async function loadS1(params) {
     if (params?.date) s1.date = params.date;
+    if (_busy.s1) return; _busy.s1 = true;
     try {
       const data = await API.getDailySale(s1.date);
       s1.channels = App.S.channels || [];
@@ -86,6 +88,7 @@ const Scr2 = (() => {
         if (cr) cr.value = data.sale.cancel_reason || '';
       }
     } catch (err) { App.toast('โหลดข้อมูลไม่สำเร็จ', 'error'); }
+    finally { _busy.s1 = false; }
   }
 
   function fillS1() {
@@ -203,6 +206,7 @@ const Scr2 = (() => {
 
   async function loadS2(params) {
     if (params?.date) s2.date = params.date;
+    if (_busy.s2) return; _busy.s2 = true;
     try {
       const data = await API.getExpenses(s2.date);
       s2.expenses = data.expenses || [];
@@ -210,6 +214,7 @@ const Scr2 = (() => {
       s2.synced = data.is_synced;
       fillS2();
     } catch (err) { App.toast('โหลดข้อมูลไม่สำเร็จ', 'error'); }
+    finally { _busy.s2 = false; }
   }
 
   function fillS2() {
@@ -385,6 +390,7 @@ const Scr2 = (() => {
   }
 
   async function loadS3List() {
+    if (_busy.s3) return; _busy.s3 = true;
     try {
       s3.dateFrom = document.getElementById('s3-from')?.value || s3.dateFrom;
       s3.dateTo = document.getElementById('s3-to')?.value || s3.dateTo;
@@ -393,6 +399,7 @@ const Scr2 = (() => {
       s3.summary = data.summary || {};
       fillS3List();
     } catch (err) { App.toast('โหลดข้อมูลไม่สำเร็จ', 'error'); }
+    finally { _busy.s3 = false; }
   }
 
   function fillS3List() {
@@ -558,6 +565,7 @@ const Scr2 = (() => {
   }
 
   async function loadS4() {
+    if (_busy.s4) return; _busy.s4 = true;
     try {
       const data = await API.getCash(s4.date);
       s4.cashSale = data.cash_sale || 0;
@@ -567,6 +575,7 @@ const Scr2 = (() => {
       s4.existing = data.existing;
       fillS4();
     } catch (err) { App.toast('โหลดข้อมูลไม่สำเร็จ', 'error'); }
+    finally { _busy.s4 = false; }
   }
 
   function fillS4() {

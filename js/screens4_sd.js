@@ -1,5 +1,5 @@
 /**
- * Version 1.0 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
@@ -9,6 +9,7 @@
 
 const Scr4 = (() => {
   const e = App.esc, fm = App.fmtMoney;
+  const _busy = {};
 
   function toolbar(title) {
     return `<div class="toolbar"><button class="toolbar-back" onclick="App.go('dashboard')">←</button><div class="toolbar-title">${title}</div></div>`;
@@ -32,12 +33,14 @@ const Scr4 = (() => {
   }
 
   async function loadAccReview() {
+    if (_busy.ar) return; _busy.ar = true;
     try {
       const data = await API.getAccReview();
       ar.days = data.days || [];
       ar.kpis = data.kpis || {};
       fillAccReview();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.ar = false; }
   }
 
   function fillAccReview() {
@@ -102,11 +105,13 @@ const Scr4 = (() => {
   }
 
   async function loadChannels() {
+    if (_busy.ch) return; _busy.ch = true;
     try {
       const data = await API.adminGetChannels();
       ch.channels = data.channels || [];
       fillChannels();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.ch = false; }
   }
 
   function fillChannels() {
@@ -183,11 +188,13 @@ const Scr4 = (() => {
   }
 
   async function loadVendors() {
+    if (_busy.vn) return; _busy.vn = true;
     try {
       const data = await API.adminGetSuppliers();
       vn.vendors = data.vendors || [];
       fillVendors();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.vn = false; }
   }
 
   function fillVendors() {
@@ -252,11 +259,13 @@ const Scr4 = (() => {
   }
 
   async function loadConfig() {
+    if (_busy.cfg) return; _busy.cfg = true;
     try {
       const data = await API.adminGetSettings();
       cfg = data.settings || {};
       fillConfig();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.cfg = false; }
   }
 
   function fillConfig() {
@@ -301,12 +310,14 @@ const Scr4 = (() => {
   }
 
   async function loadAccess() {
+    if (_busy.ua) return; _busy.ua = true;
     try {
       const data = await API.adminGetPermissions();
       ua.perms = data.permissions || [];
       ua.changes = [];
       fillAccess();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
+    finally { _busy.ua = false; }
   }
 
   function fillAccess() {

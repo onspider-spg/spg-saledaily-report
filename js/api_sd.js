@@ -1,5 +1,5 @@
 /**
- * Version 1.3 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.3.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * api_sd.js — API Client + Token + Session
@@ -163,8 +163,6 @@ const API = (() => {
     adminGetSuppliers:   ()    => post('sd_admin_get_suppliers', tokenBody()),
     adminUpdateSupplier: (d)   => post('sd_admin_update_supplier', tokenBody(d)),
     createVendor:        (d)   => post('sd_create_vendor', tokenBody(d)),
-    adminGetVendorMatrix: ()   => post('sd_admin_get_vendor_matrix', tokenBody()),
-    adminToggleVendor:   (d)   => post('sd_admin_toggle_vendor', tokenBody(d)),
     adminGetSettings:    ()    => post('sd_admin_get_settings', tokenBody()),
     adminUpdateSettings: (d)   => post('sd_admin_update_settings', tokenBody(d)),
     adminGetPermissions: ()    => post('sd_admin_get_permissions', tokenBody()),

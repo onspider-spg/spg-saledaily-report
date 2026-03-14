@@ -1,5 +1,5 @@
 /**
- * Version 1.5.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5.2 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -53,10 +53,10 @@ const Scr2 = (() => {
     if (!name) return App.toast('กรุณาใส่ชื่อ Vendor', 'error');
     const btn = document.getElementById('vn-new-save'); if (btn) btn.disabled = true;
     try {
-      const data = await API.createVendor({ store_id: API.getStore(), vendor_name: name });
-      App.S.vendors.push({ id: data.id, name: data.supplier_name || name });
+      const data = await API.createVendor({ vendor_name: name });
+      App.S.vendors.push({ id: data.id, name: data.vendor_name || name });
       App.S.vendors.sort((a, b) => a.name.localeCompare(b.name));
-      const inp = document.getElementById(dropdownId); if (inp) inp.value = data.supplier_name || name;
+      const inp = document.getElementById(dropdownId); if (inp) inp.value = data.vendor_name || name;
       App.closeDialog();
       App.toast(`สร้าง "${name}" สำเร็จ`, 'success');
     } catch (err) {

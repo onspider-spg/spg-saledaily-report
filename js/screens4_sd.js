@@ -1,5 +1,5 @@
 /**
- * Version 1.4 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.4.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
@@ -249,17 +249,17 @@ const Scr4 = (() => {
   // ═══════════════════════════════════════════
   // VENDORS — Matrix (master vendor names × stores)
   // ═══════════════════════════════════════════
-  let vn = { masters: [], stores: [], visibility: {}, search: '' };
+  let vn = { list: [], search: '' };
 
   function renderVendors() {
     return `${toolbar('Vendors')}
     <div class="content" id="vn-content">
+      ${App.renderStoreSelector()}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="sl" style="margin:0" id="vn-count">🏪 Vendor Matrix</div>
+        <div class="sl" style="margin:0" id="vn-count">🏪 Vendors</div>
         <button class="btn btn-primary btn-sm" onclick="Scr4.vnAdd()">+ Add Vendor</button>
       </div>
       <input class="fi" style="margin-bottom:8px" placeholder="🔍 Search vendors..." oninput="Scr4.vnSearch(this.value)">
-      <div style="font-size:10px;color:var(--t3);margin-bottom:8px">✓ = ร้านเห็น vendor นี้ · กดเพื่อ toggle</div>
       <div id="vn-table"><div class="skeleton sk-card" style="height:200px"></div></div>
     </div>`;
   }
@@ -267,52 +267,46 @@ const Scr4 = (() => {
   async function loadVendors() {
     if (_busy.vn) return; _busy.vn = true;
     try {
-      const data = await API.adminGetVendorMatrix();
-      vn.masters = data.masters || [];
-      vn.stores = data.stores || [];
-      vn.visibility = data.visibility || {};
+      const data = await API.adminGetSuppliers();
+      vn.list = (data.vendors || []).map(v => ({ id: v.id, name: v.vendor_name, is_active: v.is_active }));
       fillVendors();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
     finally { _busy.vn = false; }
   }
 
   function fillVendors() {
-    const list = vn.search ? vn.masters.filter(m => m.supplier_name.toLowerCase().includes(vn.search.toLowerCase())) : vn.masters;
-    document.getElementById('vn-count').textContent = `🏪 Vendor Matrix (${list.length} vendors × ${vn.stores.length} stores)`;
+    const list = vn.search ? vn.list.filter(m => m.name.toLowerCase().includes(vn.search.toLowerCase())) : vn.list;
+    document.getElementById('vn-count').textContent = `🏪 Vendors (${list.length})`;
     const el = document.getElementById('vn-table');
     if (!el) return;
     if (!list.length) { el.innerHTML = '<div class="empty-state">ยังไม่มี Vendor</div>'; return; }
-    el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:120px">Vendor</th>${vn.stores.map(s => `<th style="text-align:center;font-size:10px;min-width:40px">${e(s.store_id)}</th>`).join('')}</tr></thead>
-    <tbody>${list.map(m => {
-      const vis = vn.visibility[m.supplier_name] || {};
-      return `<tr>
-        <td style="font-size:11px;font-weight:600">${e(m.supplier_name)}</td>
-        ${vn.stores.map(s => {
-          const cell = vis[s.store_id];
-          const on = cell?.is_active !== false;
-          const hasRow = !!cell;
-          return `<td style="text-align:center"><div class="toggle-sw${on && hasRow ? ' on' : ''}" style="margin:0 auto" onclick="Scr4.vnToggle('${e(m.supplier_name)}','${s.store_id}',${!(on && hasRow)})"></div></td>`;
-        }).join('')}
-      </tr>`;
-    }).join('')}</tbody></table></div>`;
+    el.innerHTML = `<table class="tbl"><thead><tr><th>Name</th><th style="width:60px">Active</th></tr></thead>
+    <tbody>${list.map(v => `<tr${!v.is_active ? ' style="opacity:.5"' : ''}>
+      <td style="font-size:12px;font-weight:600">${e(v.name)}</td>
+      <td style="text-align:center"><div class="toggle-sw${v.is_active ? ' on' : ''}" style="margin:0 auto" onclick="Scr4.vnToggle('${v.id}',${!v.is_active})"></div></td>
+    </tr>`).join('')}</tbody></table>`;
   }
 
   function vnSearch(val) { vn.search = val; fillVendors(); }
 
-  async function vnToggle(supplierName, storeId, newState) {
-    if (!vn.visibility[supplierName]) vn.visibility[supplierName] = {};
-    const prev = vn.visibility[supplierName][storeId];
-    vn.visibility[supplierName][storeId] = { id: prev?.id || 'new', is_active: newState };
+  async function vnToggle(vendorId, newState) {
+    const v = vn.list.find(x => x.id === vendorId);
+    if (!v) return;
+    const prev = v.is_active;
+    v.is_active = newState;
     fillVendors();
-    try { await API.adminToggleVendor({ supplier_name: supplierName, store_id: storeId, is_active: newState }); }
-    catch { vn.visibility[supplierName][storeId] = prev || undefined; fillVendors(); App.toast('อัพเดทไม่สำเร็จ', 'error'); }
+    try {
+      await API.adminUpdateSupplier({ vendor_id: vendorId, is_active: newState });
+      // Update global memory too
+      if (newState) { if (!App.S.vendors.find(x => x.id === vendorId)) { App.S.vendors.push({ id: vendorId, name: v.name }); App.S.vendors.sort((a, b) => a.name.localeCompare(b.name)); } }
+      else { App.S.vendors = App.S.vendors.filter(x => x.id !== vendorId); }
+    } catch { v.is_active = prev; fillVendors(); App.toast('อัพเดทไม่สำเร็จ', 'error'); }
   }
 
   function vnAdd() {
     App.showDialog(`<div class="popup-sheet" style="width:320px">
       <div class="popup-header"><div class="popup-title">+ Add Vendor</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
       <div class="fg"><label class="fl">Vendor Name <span class="req">*</span></label><input class="fi" id="vn-name"></div>
-      <div class="fg"><label class="fl">เพิ่มให้ร้าน</label><select class="fi" id="vn-store"><option value="">— ทุกร้าน —</option>${vn.stores.map(s => `<option value="${s.store_id}">${e(s.store_name || s.store_id)}</option>`).join('')}</select></div>
       <button class="btn btn-gold btn-full" id="vn-save" onclick="Scr4.vnSaveNew()">💾 Save</button>
     </div>`);
   }
@@ -320,18 +314,14 @@ const Scr4 = (() => {
   async function vnSaveNew() {
     const name = document.getElementById('vn-name')?.value?.trim();
     if (!name) return App.toast('กรุณาใส่ชื่อ Vendor', 'error');
-    const storeId = document.getElementById('vn-store')?.value;
     const btn = document.getElementById('vn-save'); if (btn) btn.disabled = true;
     try {
-      if (storeId) {
-        await API.createVendor({ store_id: storeId, vendor_name: name });
-      } else {
-        // Create for all stores
-        for (const s of vn.stores) { await API.createVendor({ store_id: s.store_id, vendor_name: name }); }
-      }
+      const data = await API.createVendor({ vendor_name: name });
+      App.S.vendors.push({ id: data.id, name: data.vendor_name || name });
+      App.S.vendors.sort((a, b) => a.name.localeCompare(b.name));
       App.closeDialog();
       App.toast(`สร้าง "${name}" สำเร็จ`, 'success');
-      loadVendors(); // reload matrix
+      loadVendors();
     } catch (err) { App.toast(err.message || 'สร้างไม่สำเร็จ', 'error'); }
     finally { if (btn) btn.disabled = false; }
   }

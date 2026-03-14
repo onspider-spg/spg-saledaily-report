@@ -1,5 +1,5 @@
 /**
- * Version 1.7 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.8 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -40,6 +40,7 @@ const App = (() => {
     'tasks':          { render: () => Scr3.renderTasks(),            onLoad: () => Scr3.loadTasks() },
     'daily-hub':      { render: () => Scr3.renderDH(),              onLoad: () => Scr3.loadDH() },
     'acc-review':     { render: () => Scr4.renderAccReview(),       onLoad: () => Scr4.loadAccReview() },
+    'admin-report':   { render: () => Scr4.renderReportDash(),      onLoad: () => Scr4.loadReportDash() },
     'channels':       { render: () => Scr4.renderChannels(),        onLoad: () => Scr4.loadChannels() },
     'vendors':        { render: () => Scr4.renderVendors(),         onLoad: () => Scr4.loadVendors() },
     'config':         { render: () => Scr4.renderConfig(),          onLoad: () => Scr4.loadConfig() },
@@ -150,6 +151,7 @@ const App = (() => {
     if (isAdmin) {
       groups.push({ ico: '⚙', label: 'Admin', items: [
         { label: 'Account Review', route: 'acc-review' },
+        { label: 'Report Dashboard', route: 'admin-report' },
         { label: 'Channels', route: 'channels' },
         { label: 'Vendors', route: 'vendors' },
         { label: 'Config', route: 'config' },
@@ -237,7 +239,7 @@ const App = (() => {
       { sec: 'Report', items: [{ l: 'Daily Report', r: 'daily-report' }, { l: 'Daily Hub', r: 'daily-hub' }, { l: 'Tasks', r: 'tasks' }] },
     ];
     if (tl <= 2) {
-      sections.push({ sec: 'Admin', items: [{ l: 'Account Review', r: 'acc-review' }, { l: 'Channels', r: 'channels' }, { l: 'Vendors', r: 'vendors' }, { l: 'Config', r: 'config' }, { l: 'User Access', r: 'access' }, { l: 'Audit', r: 'audit' }] });
+      sections.push({ sec: 'Admin', items: [{ l: 'Account Review', r: 'acc-review' }, { l: 'Report Dashboard', r: 'admin-report' }, { l: 'Channels', r: 'channels' }, { l: 'Vendors', r: 'vendors' }, { l: 'Config', r: 'config' }, { l: 'User Access', r: 'access' }, { l: 'Audit', r: 'audit' }] });
     }
 
     let html = `<div class="mob-sd-header">

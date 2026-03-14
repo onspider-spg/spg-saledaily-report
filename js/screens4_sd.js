@@ -1,9 +1,9 @@
 /**
- * Version 1.3 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.4 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
- * ACC Review | Channels | Vendors | Config | User Access | Audit
+ * ACC Review | Report Dashboard | Channels | Vendors | Config | User Access | Audit
  * ═══════════════════════════════════════════
  */
 
@@ -563,9 +563,190 @@ const Scr4 = (() => {
   function auLoadMore() { au.offset += 50; auLoad(true); }
 
 
+  // ═══════════════════════════════════════════
+  // C5: ADMIN REPORT DASHBOARD — Monthly summary (7 sections)
+  // ═══════════════════════════════════════════
+  let rd = { data: null, month: '' };
+
+  function rdMonthLabel(m) { const p = m.split('-'); const ms = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return ms[parseInt(p[1])] + ' ' + p[0]; }
+
+  function renderReportDash() {
+    rd.month = rd.month || new Date().toISOString().substring(0, 7);
+    return `${toolbar('Report Dashboard')}
+    <div class="content" id="rd-content">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 0 10px;font-size:13px;font-weight:600">
+        <span class="dbar-btn" onclick="Scr4.rdMonthNav(-1)">‹</span>
+        <span id="rd-month-label">📊 ${rdMonthLabel(rd.month)}</span>
+        <span class="dbar-btn" onclick="Scr4.rdMonthNav(1)">›</span>
+      </div>
+      <div id="rd-kpi" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
+      <div id="rd-kpi2" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
+      <div id="rd-sec2" class="skeleton sk-card" style="height:100px"></div>
+      <div id="rd-sec3" class="skeleton sk-card" style="height:60px"></div>
+      <div id="rd-sec4" class="skeleton sk-card" style="height:120px"></div>
+      <div id="rd-sec5" class="skeleton sk-card" style="height:80px"></div>
+      <div id="rd-sec6" class="skeleton sk-card" style="height:80px"></div>
+      <div id="rd-sec7" class="skeleton sk-card" style="height:80px"></div>
+    </div>`;
+  }
+
+  function rdMonthNav(delta) {
+    const p = rd.month.split('-');
+    const d = new Date(parseInt(p[0]), parseInt(p[1]) - 1 + delta, 1);
+    rd.month = d.toISOString().substring(0, 7);
+    document.getElementById('rd-month-label').textContent = '📊 ' + rdMonthLabel(rd.month);
+    loadReportDash();
+  }
+
+  async function loadReportDash() {
+    if (_busy.rd) return; _busy.rd = true;
+    try {
+      rd.data = await API.getReportDashboard(rd.month);
+      fillReportDash();
+    } catch { App.toast('โหลด Report Dashboard ไม่ได้', 'error'); }
+    finally { _busy.rd = false; }
+  }
+
+  function fillReportDash() {
+    const d = rd.data; if (!d) return;
+    const fm = App.fmtMoney, fms = App.fmtMoneyShort;
+    const k = d.kpis || {};
+
+    // ── KPI Row 1: Sales / Expense / Net ──
+    const kpi1 = document.getElementById('rd-kpi');
+    if (kpi1) {
+      kpi1.className = 'kpi-row'; kpi1.style.gridTemplateColumns = '1fr 1fr 1fr';
+      kpi1.innerHTML = `
+        <div class="kpi-box"><div class="kpi-label">💰 Total Sales</div><div class="kpi-val" style="font-size:13px;color:var(--gold)">${fms(k.total_sales || 0)}</div></div>
+        <div class="kpi-box"><div class="kpi-label">🧾 Total Expense</div><div class="kpi-val" style="font-size:13px;color:var(--r)">${fms(k.total_expense || 0)}</div></div>
+        <div class="kpi-box"><div class="kpi-label">📈 Net Profit</div><div class="kpi-val" style="font-size:13px;color:${(k.net_profit || 0) >= 0 ? 'var(--g)' : 'var(--r)'}">${fms(k.net_profit || 0)}</div></div>`;
+    }
+
+    // ── KPI Row 2: Days / Stores / Avg ──
+    const kpi2 = document.getElementById('rd-kpi2');
+    if (kpi2) {
+      kpi2.className = 'kpi-row'; kpi2.style.gridTemplateColumns = '1fr 1fr 1fr';
+      kpi2.innerHTML = `
+        <div class="kpi-box"><div class="kpi-label">📅 Days Recorded</div><div class="kpi-val" style="font-size:14px">${k.days_recorded || 0}</div></div>
+        <div class="kpi-box"><div class="kpi-label">🏪 Active Stores</div><div class="kpi-val" style="font-size:14px">${k.stores_active || 0}</div></div>
+        <div class="kpi-box"><div class="kpi-label">📊 Avg/Day</div><div class="kpi-val" style="font-size:13px">${fms(k.avg_sales_per_day || 0)}</div></div>`;
+    }
+
+    // ── Sec 2: Incident Breakdown ──
+    const sec2 = document.getElementById('rd-sec2');
+    if (sec2) {
+      const inc = d.incidents || {};
+      const cats = inc.by_category || [];
+      if (cats.length) {
+        const maxC = Math.max(...cats.map(c => c.count), 1);
+        sec2.className = 'card'; sec2.style.height = 'auto';
+        sec2.innerHTML = `<div class="sl" style="margin-top:0">🔍 Incidents (${inc.total_count || 0} total · ${inc.stores_with_incidents || 0} stores)</div>
+          ${cats.map(c => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px">
+            <span style="width:16px;text-align:center">${e(c.icon)}</span>
+            <span style="min-width:100px">${e(c.category)}</span>
+            <div style="flex:1;background:var(--bg3);border-radius:3px;height:14px;overflow:hidden"><div style="width:${Math.round(c.count / maxC * 100)}%;height:100%;background:var(--r);border-radius:3px;opacity:.7"></div></div>
+            <span style="font-weight:600;min-width:24px;text-align:right">${c.count}</span>
+          </div>`).join('')}`;
+      } else { sec2.innerHTML = ''; sec2.className = ''; sec2.style.height = '0'; }
+    }
+
+    // ── Sec 3: Incident Trend ──
+    const sec3 = document.getElementById('rd-sec3');
+    if (sec3) {
+      const trend = d.incident_trend || [];
+      if (trend.length) {
+        sec3.className = 'card'; sec3.style.height = 'auto';
+        sec3.innerHTML = `<div class="sl" style="margin-top:0">📈 Incident Trend</div>
+          <div style="display:flex;gap:4px;align-items:flex-end;height:50px">
+            ${trend.map(t => {
+              const maxT = Math.max(...trend.map(x => x.count), 1);
+              const h = Math.max(Math.round(t.count / maxT * 40), 2);
+              const day = t.date.substring(8);
+              return `<div style="flex:1;text-align:center"><div style="background:var(--r);opacity:.6;height:${h}px;border-radius:2px 2px 0 0;margin:0 auto;width:80%"></div><div style="font-size:8px;color:var(--t4);margin-top:2px">${day}</div></div>`;
+            }).join('')}
+          </div>`;
+      } else { sec3.innerHTML = ''; sec3.className = ''; sec3.style.height = '0'; }
+    }
+
+    // ── Sec 4: Store Comparison ──
+    const sec4 = document.getElementById('rd-sec4');
+    if (sec4) {
+      const stores = d.store_comparison || [];
+      if (stores.length) {
+        sec4.className = 'card'; sec4.style.height = 'auto';
+        sec4.innerHTML = `<div class="sl" style="margin-top:0">🏪 Store Comparison</div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Store</th><th>Sales</th><th>Expense</th><th>Days</th><th>Avg/Day</th></tr></thead>
+          <tbody>${stores.map(s => `<tr>
+            <td style="font-size:10px;font-weight:600">${e(s.store_name || s.store_id)}</td>
+            <td style="font-size:10px;color:var(--gold)">${fms(s.total_sales)}</td>
+            <td style="font-size:10px;color:var(--r)">${fms(s.total_expense)}</td>
+            <td style="font-size:10px;text-align:center">${s.days_recorded}</td>
+            <td style="font-size:10px">${fms(s.avg_sales)}</td>
+          </tr>`).join('')}</tbody></table></div>`;
+      } else { sec4.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>'; sec4.className = ''; sec4.style.height = 'auto'; }
+    }
+
+    // ── Sec 5: Leftovers ──
+    const sec5 = document.getElementById('rd-sec5');
+    if (sec5) {
+      const left = d.leftovers || {};
+      const items = left.top_items || [];
+      if (items.length) {
+        sec5.className = 'card'; sec5.style.height = 'auto';
+        sec5.innerHTML = `<div class="sl" style="margin-top:0">🍰 Top Leftovers (${left.total_entries || 0} items)</div>
+          <div style="font-size:11px">${items.map((it, i) =>
+            `<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--bg3)">
+              <span>${i + 1}. ${e(it.item_name)}</span>
+              <span style="color:var(--t3)">×${it.total_qty} (${it.frequency} days)</span>
+            </div>`
+          ).join('')}</div>`;
+      } else { sec5.innerHTML = ''; sec5.className = ''; sec5.style.height = '0'; }
+    }
+
+    // ── Sec 6: Weather × Sales ──
+    const sec6 = document.getElementById('rd-sec6');
+    if (sec6) {
+      const wList = d.weather || [];
+      if (wList.length && !(wList.length === 1 && wList[0].weather_type === 'unknown')) {
+        sec6.className = 'card'; sec6.style.height = 'auto';
+        const wIcons = { 'sunny': '☀️', 'cloudy': '☁️', 'rainy': '🌧️', 'stormy': '⛈️', 'hot': '🔥', 'cool': '❄️' };
+        sec6.innerHTML = `<div class="sl" style="margin-top:0">🌤️ Weather Impact</div>
+          <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Weather</th><th>Days</th><th>Avg Sales</th></tr></thead>
+          <tbody>${wList.map(w => `<tr>
+            <td style="font-size:11px">${wIcons[w.weather_type] || '🌡️'} ${e(w.weather_type)}</td>
+            <td style="font-size:11px;text-align:center">${w.count}</td>
+            <td style="font-size:11px">${fms(w.avg_sales)}</td>
+          </tr>`).join('')}</tbody></table></div>`;
+      } else { sec6.innerHTML = ''; sec6.className = ''; sec6.style.height = '0'; }
+    }
+
+    // ── Sec 7: Tasks ──
+    const sec7 = document.getElementById('rd-sec7');
+    if (sec7) {
+      const tk = d.tasks || {};
+      if (tk.total > 0) {
+        const pct = tk.completion_rate || 0;
+        sec7.className = 'card'; sec7.style.height = 'auto';
+        sec7.innerHTML = `<div class="sl" style="margin-top:0">📋 Tasks Summary</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="flex:1;background:var(--bg3);border-radius:4px;height:16px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--g);border-radius:4px;transition:width .3s"></div></div>
+            <span style="font-size:12px;font-weight:600">${pct}%</span>
+          </div>
+          <div style="display:flex;gap:12px;font-size:11px;margin-bottom:6px">
+            <span>Total: <b>${tk.total}</b></span>
+            <span style="color:var(--g)">Done: <b>${tk.done}</b></span>
+            <span style="color:var(--o)">Pending: <b>${tk.pending}</b></span>
+          </div>
+          ${(tk.by_type || []).length ? `<div style="font-size:10px;color:var(--t3)">By type: ${(tk.by_type || []).map(t => `${e(t.type)} (${t.done}/${t.total})`).join(' · ')}</div>` : ''}`;
+      } else { sec7.innerHTML = ''; sec7.className = ''; sec7.style.height = '0'; }
+    }
+  }
+
+
   // ═══ PUBLIC ═══
   return {
     renderAccReview, loadAccReview, arMonthNav, arSync, arConfirmSync, arUnlock, arConfirmUnlock,
+    renderReportDash, loadReportDash, rdMonthNav,
     renderChannels, loadChannels, chToggle, chAdd, chSaveNew,
     renderVendors, loadVendors, vnSearch, vnToggle, vnAdd, vnSaveNew,
     renderConfig, loadConfig, cfgSave,

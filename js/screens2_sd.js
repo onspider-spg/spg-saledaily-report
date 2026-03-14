@@ -1,5 +1,5 @@
 /**
- * Version 1.3 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.4 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -11,6 +11,68 @@
 const Scr2 = (() => {
   const e = App.esc, fm = App.fmtMoney, td = App.todayStr;
   const _busy = {}; // in-flight guard: _busy.s1, _busy.s2, etc.
+
+  // ═══ SHARED: Vendor Search + Create ═══
+  function renderVendorInput(id, value) {
+    return `<div class="vendor-wrap" style="position:relative">
+      <input type="text" class="fi" id="${id}" value="${e(value || '')}" placeholder="🔍 พิมพ์ค้นหา Vendor..."
+        autocomplete="off" onfocus="Scr2.vnShow('${id}')" oninput="Scr2.vnFilter('${id}')">
+      <div id="${id}-list" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg);border:1px solid var(--bd);border-radius:0 0 var(--rd) var(--rd);max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></div>
+      <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.vnCreate('${id}')">+ เพิ่ม Vendor ใหม่</button>
+    </div>`;
+  }
+
+  function vnShow(id) { vnFilter(id); document.getElementById(id + '-list').style.display = 'block';
+    setTimeout(() => { document.addEventListener('click', function _c(ev) { if (!ev.target.closest('.vendor-wrap')) { const el = document.getElementById(id + '-list'); if (el) el.style.display = 'none'; document.removeEventListener('click', _c); } }); }, 50); }
+
+  function vnFilter(id) {
+    const q = (document.getElementById(id)?.value || '').toLowerCase();
+    const el = document.getElementById(id + '-list'); if (!el) return;
+    const vendors = App.S.vendors || [];
+    const filtered = vendors.filter(v => v.name.toLowerCase().includes(q));
+    el.innerHTML = filtered.length ? filtered.map(v => `<div style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--bd2)" onmousedown="Scr2.vnPick('${id}','${e(v.name)}')">${e(v.name)}</div>`).join('')
+      : '<div style="padding:10px;color:var(--t3);font-size:11px;text-align:center">ไม่พบ — ลองกด "+ เพิ่ม"</div>';
+    el.style.display = 'block';
+  }
+
+  function vnPick(id, name) { const inp = document.getElementById(id); if (inp) inp.value = name; const el = document.getElementById(id + '-list'); if (el) el.style.display = 'none'; }
+
+  function vnCreate(dropdownId) {
+    App.showDialog(`<div class="popup-sheet" style="width:320px">
+      <div class="popup-header"><div class="popup-title">➕ สร้าง Vendor ใหม่</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
+      <div class="fg"><label class="fl">ชื่อ Vendor <span class="req">*</span></label><input class="fi" id="vn-new-name" placeholder="เช่น Akipan" autofocus></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-gold" style="flex:1" id="vn-new-save" onclick="Scr2.vnDoCreate('${dropdownId}')">สร้าง</button>
+        <button class="btn btn-outline" style="flex:1" onclick="App.closeDialog()">ยกเลิก</button>
+      </div>
+    </div>`);
+  }
+
+  async function vnDoCreate(dropdownId) {
+    const name = (document.getElementById('vn-new-name')?.value || '').trim();
+    if (!name) return App.toast('กรุณาใส่ชื่อ Vendor', 'error');
+    const btn = document.getElementById('vn-new-save'); if (btn) btn.disabled = true;
+    try {
+      const data = await API.createVendor({ store_id: API.getStore(), vendor_name: name });
+      App.S.vendors.push({ id: data.id, name: data.supplier_name || name });
+      App.S.vendors.sort((a, b) => a.name.localeCompare(b.name));
+      const inp = document.getElementById(dropdownId); if (inp) inp.value = data.supplier_name || name;
+      App.closeDialog();
+      App.toast(`สร้าง "${name}" สำเร็จ`, 'success');
+    } catch (err) {
+      if (err.code === 'DUPLICATE_VISIBLE') { App.toast(err.message || 'ชื่อซ้ำ', 'error'); const inp = document.getElementById(dropdownId); if (inp) inp.value = ''; }
+      else App.toast(err.message || 'สร้างไม่สำเร็จ', 'error');
+    } finally { if (btn) btn.disabled = false; }
+  }
+
+  // ═══ SHARED: Extra Photos ═══
+  function renderExtraPhotos(photos, prefix) {
+    if (!photos || !photos.length) return '';
+    return photos.map((url, i) => `<div style="position:relative;width:54px;height:54px;border-radius:6px;overflow:hidden;border:1px solid var(--bd)">
+      <img src="${url}" style="width:100%;height:100%;object-fit:cover">
+      <div style="position:absolute;top:-2px;right:-2px;background:var(--r);color:#fff;width:16px;height:16px;border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="Scr2.${prefix}RemoveExtra(${i})">×</div>
+    </div>`).join('');
+  }
 
   // ═══ SHARED: Date Bar ═══
   function dateBar(id, date, onChange) {
@@ -37,7 +99,7 @@ const Scr2 = (() => {
   // ═══════════════════════════════════════════
   // S1: DAILY SALE
   // ═══════════════════════════════════════════
-  let s1 = { date: '', channels: [], amounts: {}, photoCard: null, photoCash: null, synced: false, saleId: null, _target: null };
+  let s1 = { date: '', channels: [], amounts: {}, photoCard: null, photoCash: null, extraPhotos: [], synced: false, saleId: null, _target: null };
 
   function renderS1(params) {
     s1.date = params?.date || s1.date || td();
@@ -63,7 +125,9 @@ const Scr2 = (() => {
         <div class="pbox" id="s1-photo-card" onclick="Scr2.s1PickPhoto('card')"><div>📸</div><div>Card Summary</div><div style="color:var(--r)">*</div></div>
         <div class="pbox" id="s1-photo-cash" onclick="Scr2.s1PickPhoto('cash')" style="display:none"><div>📸</div><div>Cash</div></div>
       </div>
-      <input type="file" id="s1-file" accept="image/*" style="display:none" onchange="Scr2.s1HandlePhoto(event)">
+      <div id="s1-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+      <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s1PickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
+      <input type="file" id="s1-file" accept="image/*,.pdf" style="display:none" onchange="Scr2.s1HandlePhoto(event)">
       <div style="margin-top:12px"><button class="btn btn-gold btn-full" style="padding:10px" id="s1-save" onclick="Scr2.s1Save()">💾 Save</button></div>
     </div>`;
   }
@@ -79,6 +143,7 @@ const Scr2 = (() => {
       s1.amounts = {};
       s1.photoCard = data.sale?.photo_card_url || null;
       s1.photoCash = data.sale?.photo_cash_url || null;
+      s1.extraPhotos = data.sale?.extra_photos || [];
       if (data.sale?.sd_sale_channels) data.sale.sd_sale_channels.forEach(ch => { s1.amounts[ch.channel_key] = ch.amount; });
       fillS1();
       if (data.sale) {
@@ -110,6 +175,9 @@ const Scr2 = (() => {
     // Photo state
     const pc = document.getElementById('s1-photo-card');
     if (pc && s1.photoCard) { pc.innerHTML = `<img src="${s1.photoCard}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; pc.style.border = 'none'; }
+    // Extra photos
+    const epEl = document.getElementById('s1-extra-photos');
+    if (epEl) epEl.innerHTML = renderExtraPhotos(s1.extraPhotos, 's1');
     // Disable save if synced
     const btn = document.getElementById('s1-save');
     if (btn) btn.disabled = s1.synced;
@@ -147,12 +215,22 @@ const Scr2 = (() => {
         s1.photoCard = data.url;
         const el = document.getElementById('s1-photo-card');
         if (el) { el.innerHTML = `<img src="${data.url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; el.style.border = 'none'; }
+      } else if (s1._target === 'extra') {
+        s1.extraPhotos.push(data.url);
+        const epEl = document.getElementById('s1-extra-photos');
+        if (epEl) epEl.innerHTML = renderExtraPhotos(s1.extraPhotos, 's1');
       } else {
         s1.photoCash = data.url;
       }
       App.toast('อัพโหลดสำเร็จ', 'success');
     } catch (err) { App.toast('อัพโหลดล้มเหลว', 'error'); }
     event.target.value = '';
+  }
+
+  function s1RemoveExtra(idx) {
+    s1.extraPhotos.splice(idx, 1);
+    const epEl = document.getElementById('s1-extra-photos');
+    if (epEl) epEl.innerHTML = renderExtraPhotos(s1.extraPhotos, 's1');
   }
 
   async function s1Save() {
@@ -166,6 +244,7 @@ const Scr2 = (() => {
       const resp = await API.saveDailySale({
         store_id: API.getStore(), sale_date: s1.date, channels,
         photo_card_url: s1.photoCard, photo_cash_url: s1.photoCash,
+        extra_photos: s1.extraPhotos.length ? s1.extraPhotos : [],
         cancel_amount: document.getElementById('s1-cancel-amt')?.value || null,
         cancel_reason: document.getElementById('s1-cancel-reason')?.value || null,
       });
@@ -184,7 +263,7 @@ const Scr2 = (() => {
   // ═══════════════════════════════════════════
   // S2: EXPENSE
   // ═══════════════════════════════════════════
-  let s2 = { date: '', expenses: [], total: 0, synced: false };
+  let s2 = { date: '', expenses: [], total: 0, synced: false, extraPhotos: [] };
 
   function renderS2(params) {
     s2.date = params?.date || s2.date || td();
@@ -252,12 +331,12 @@ const Scr2 = (() => {
   function s2ShowPopup(editId) {
     const ex = editId ? s2.expenses.find(x => x.id === editId) : null;
     const title = ex ? 'Edit Expense' : '+ Add Expense';
-    const vendors = App.S.vendors || [];
+    s2.extraPhotos = ex?.extra_photos || [];
     App.showDialog(`<div class="popup-sheet" style="width:400px;max-height:85dvh;overflow-y:auto">
       <div class="popup-header"><div class="popup-title">${title}</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
       <div class="fg"><label class="fl">📅 Date</label><input class="fi" type="date" id="s2f-date" value="${ex?.expense_date || s2.date}"></div>
       <div class="fg"><label class="fl">Vendor <span class="req">*</span></label>
-        <select class="fi" id="s2f-vendor"><option value="">-- เลือก Vendor --</option>${vendors.map(v => `<option value="${e(v.name)}" ${ex?.vendor_name === v.name ? 'selected' : ''}>${e(v.name)}</option>`).join('')}</select></div>
+        ${renderVendorInput('s2f-vendor', ex?.vendor_name || '')}</div>
       <div class="fg"><label class="fl">Doc Number <span class="req">*</span></label><input class="fi" id="s2f-doc" value="${e(ex?.doc_number || '')}"></div>
       <div class="fg"><label class="fl">Description <span class="req">*</span></label><input class="fi" id="s2f-desc" value="${e(ex?.description || '')}"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
@@ -271,12 +350,14 @@ const Scr2 = (() => {
           <div class="chip ${ex?.payment_method === 'card' ? 'on' : ''}" onclick="Scr2.s2SetPm('card',this)">Card</div>
         </div></div>
         <div class="fg"><label class="fl">📸 Photo <span class="req">*</span></label>
-          <div class="pbox" style="width:60px;height:60px" id="s2f-photo-box" onclick="document.getElementById('s2f-file').click()">
+          <div class="pbox" style="width:60px;height:60px" id="s2f-photo-box" onclick="Scr2.s2PickPhoto('main')">
             ${ex?.photo_url ? `<img src="${ex.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">` : '<div>📸</div>'}
           </div>
-          <input type="file" id="s2f-file" accept="image/*" style="display:none" onchange="Scr2.s2HandlePhoto(event)">
         </div>
       </div>
+      <div id="s2f-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${renderExtraPhotos(s2.extraPhotos, 's2')}</div>
+      <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s2PickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
+      <input type="file" id="s2f-file" accept="image/*,.pdf" style="display:none" onchange="Scr2.s2HandlePhoto(event)">
       <input type="hidden" id="s2f-photo-url" value="${ex?.photo_url || ''}">
       <input type="hidden" id="s2f-id" value="${editId || ''}">
       <input type="hidden" id="s2f-pm-val" value="${ex?.payment_method || 'cash'}">
@@ -301,17 +382,32 @@ const Scr2 = (() => {
     if (el) el.value = fm(a + g);
   }
 
+  let _s2PhotoTarget = 'main';
+  function s2PickPhoto(target) { _s2PhotoTarget = target || 'main'; document.getElementById('s2f-file')?.click(); }
+
   async function s2HandlePhoto(event) {
     const file = event.target.files?.[0]; if (!file) return;
     try {
       App.toast('กำลังอัพโหลด...', 'info');
       const data = await API.uploadPhoto(file, 'expense');
-      document.getElementById('s2f-photo-url').value = data.url;
-      const box = document.getElementById('s2f-photo-box');
-      if (box) { box.innerHTML = `<img src="${data.url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; box.style.border = 'none'; }
+      if (_s2PhotoTarget === 'extra') {
+        s2.extraPhotos.push(data.url);
+        const epEl = document.getElementById('s2f-extra-photos');
+        if (epEl) epEl.innerHTML = renderExtraPhotos(s2.extraPhotos, 's2');
+      } else {
+        document.getElementById('s2f-photo-url').value = data.url;
+        const box = document.getElementById('s2f-photo-box');
+        if (box) { box.innerHTML = `<img src="${data.url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; box.style.border = 'none'; }
+      }
       App.toast('อัพโหลดสำเร็จ', 'success');
     } catch { App.toast('อัพโหลดล้มเหลว', 'error'); }
     event.target.value = '';
+  }
+
+  function s2RemoveExtra(idx) {
+    s2.extraPhotos.splice(idx, 1);
+    const epEl = document.getElementById('s2f-extra-photos');
+    if (epEl) epEl.innerHTML = renderExtraPhotos(s2.extraPhotos, 's2');
   }
 
   async function s2Save() {
@@ -326,6 +422,7 @@ const Scr2 = (() => {
         gst: document.getElementById('s2f-gst')?.value || '0',
         payment_method: document.getElementById('s2f-pm-val')?.value || 'cash',
         photo_url: document.getElementById('s2f-photo-url')?.value,
+        extra_photos: s2.extraPhotos.length ? s2.extraPhotos : [],
         expense_id: document.getElementById('s2f-id')?.value || null,
       });
       App.closeDialog();
@@ -430,11 +527,12 @@ const Scr2 = (() => {
   function s3LoadMore() { s3.offset += 10; loadS3List(false); }
 
   // ─── S3 FORM ───
-  let s3f = { id: null, photoUrl: '', hasCN: false };
+  let s3f = { id: null, photoUrl: '', hasCN: false, extraPhotos: [] };
 
   function renderS3Form(params) {
     s3f.id = params?.id || null;
     s3f.hasCN = false;
+    s3f.extraPhotos = [];
     return `${toolbar(s3f.id ? 'Edit Invoice' : 'New Invoice')}
     <div class="content" id="s3f-content">
       <div class="card">
@@ -442,7 +540,7 @@ const Scr2 = (() => {
         <div class="fg"><label class="fl">📅 Issue Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-date" value="${td()}" onchange="Scr2.s3fDateChange()"></div>
         <div class="fg"><label class="fl">Invoice No <span class="req">*</span></label><input class="fi" id="s3f-no"></div>
         <div class="fg"><label class="fl">Vendor <span class="req">*</span></label>
-          <select class="fi" id="s3f-vendor"><option value="">-- เลือก --</option>${(App.S.vendors || []).map(v => `<option value="${e(v.name)}">${e(v.name)}</option>`).join('')}</select></div>
+          ${renderVendorInput('s3f-vendor', '')}</div>
         <div class="fg"><label class="fl">Description <span class="req">*</span></label><input class="fi" id="s3f-desc"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div class="fg"><label class="fl">Amount <span class="req">*</span></label><input class="fi" type="number" step="0.01" id="s3f-amt" oninput="Scr2.s3fCalc()"></div>
@@ -467,8 +565,10 @@ const Scr2 = (() => {
           </div>
         </div>
         <div class="fg"><label class="fl">📸 Invoice Photo <span class="req">*</span></label>
-          <div class="pbox" id="s3f-photo-box" onclick="document.getElementById('s3f-file').click()"><div>📸</div><div style="font-size:8px">* บังคับ</div></div>
-          <input type="file" id="s3f-file" accept="image/*" style="display:none" onchange="Scr2.s3fHandlePhoto(event)">
+          <div class="pbox" id="s3f-photo-box" onclick="Scr2.s3fPickPhoto('main')"><div>📸</div><div style="font-size:8px">* บังคับ</div></div>
+          <div id="s3f-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
+          <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s3fPickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
+          <input type="file" id="s3f-file" accept="image/*,.pdf" style="display:none" onchange="Scr2.s3fHandlePhoto(event)">
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
@@ -484,9 +584,10 @@ const Scr2 = (() => {
     if (!inv) return;
     s3f.id = inv.id;
     s3f.photoUrl = inv.photo_url || '';
+    s3f.extraPhotos = inv.extra_photos || [];
     document.getElementById('s3f-date').value = inv.invoice_date;
     document.getElementById('s3f-no').value = inv.invoice_no;
-    document.getElementById('s3f-vendor').value = inv.vendor_name;
+    const vnInp = document.getElementById('s3f-vendor'); if (vnInp) vnInp.value = inv.vendor_name;
     document.getElementById('s3f-desc').value = inv.description;
     document.getElementById('s3f-amt').value = inv.amount_ex_gst;
     document.getElementById('s3f-gst').value = inv.gst;
@@ -495,6 +596,9 @@ const Scr2 = (() => {
       const box = document.getElementById('s3f-photo-box');
       if (box) { box.innerHTML = `<img src="${inv.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; }
     }
+    // Extra photos
+    const epEl = document.getElementById('s3f-extra-photos');
+    if (epEl) epEl.innerHTML = renderExtraPhotos(s3f.extraPhotos, 's3f');
     // Credit Note
     if (inv.has_credit_note) {
       s3f.hasCN = true;
@@ -533,17 +637,32 @@ const Scr2 = (() => {
     document.getElementById('s3f-total').value = fm(a + g);
   }
 
+  let _s3fPhotoTarget = 'main';
+  function s3fPickPhoto(target) { _s3fPhotoTarget = target || 'main'; document.getElementById('s3f-file')?.click(); }
+
   async function s3fHandlePhoto(event) {
     const file = event.target.files?.[0]; if (!file) return;
     try {
       App.toast('กำลังอัพโหลด...', 'info');
       const data = await API.uploadPhoto(file, 'invoice');
-      s3f.photoUrl = data.url;
-      const box = document.getElementById('s3f-photo-box');
-      if (box) { box.innerHTML = `<img src="${data.url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; }
+      if (_s3fPhotoTarget === 'extra') {
+        s3f.extraPhotos.push(data.url);
+        const epEl = document.getElementById('s3f-extra-photos');
+        if (epEl) epEl.innerHTML = renderExtraPhotos(s3f.extraPhotos, 's3f');
+      } else {
+        s3f.photoUrl = data.url;
+        const box = document.getElementById('s3f-photo-box');
+        if (box) { box.innerHTML = `<img src="${data.url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; }
+      }
       App.toast('อัพโหลดสำเร็จ', 'success');
     } catch { App.toast('อัพโหลดล้มเหลว', 'error'); }
     event.target.value = '';
+  }
+
+  function s3fRemoveExtra(idx) {
+    s3f.extraPhotos.splice(idx, 1);
+    const epEl = document.getElementById('s3f-extra-photos');
+    if (epEl) epEl.innerHTML = renderExtraPhotos(s3f.extraPhotos, 's3f');
   }
 
   async function s3fSave() {
@@ -568,6 +687,7 @@ const Scr2 = (() => {
         gst: document.getElementById('s3f-gst')?.value || '0',
         due_date: document.getElementById('s3f-due')?.value,
         photo_url: s3f.photoUrl,
+        extra_photos: s3f.extraPhotos.length ? s3f.extraPhotos : [],
         invoice_id: s3f.id,
         has_credit_note: s3f.hasCN,
         credit_note_no: s3f.hasCN ? (document.getElementById('s3f-cn-no')?.value?.trim() || '') : null,
@@ -672,19 +792,19 @@ const Scr2 = (() => {
     const c = s4.existing;
     if (!c) return;
     const steps = [
-      { label: 'Cashier counted', done: !!c.cashier_confirmed_at, by: c.cashier_confirmed_by },
-      { label: 'Manager confirmed', done: c.handover_status !== 'with_cashier', by: c.manager_confirmed_by },
-      { label: 'Owner confirmed', done: c.handover_status === 'owner' || c.handover_status === 'deposited', by: c.owner_confirmed_by },
-      { label: 'Deposited', done: c.handover_status === 'deposited' },
+      { label: '👤 Cashier counted', done: !!c.cashier_confirmed_at, by: c.cashier_confirmed_by },
+      { label: '👔 Cash Collected (Manager)', done: c.handover_status === 'manager' || c.handover_status === 'owner' || c.handover_status === 'deposited', by: c.manager_confirmed_by },
     ];
-    const canConfirm = c.handover_status !== 'deposited';
+    const completed = c.handover_status !== 'with_cashier';
+    const canConfirm = c.handover_status === 'with_cashier';
 
     document.getElementById('s4-handover').innerHTML = `<div class="card">
       ${steps.map(s => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px">
         <div style="width:8px;height:8px;border-radius:50%;background:${s.done ? 'var(--g)' : 'var(--o)'}"></div>
         <div>${s.done ? '<b>' : ''}${s.label}${s.done ? '</b>' : ''}${s.by ? ' · ' + e(s.by) : ''}</div>
       </div>`).join('')}
-      ${canConfirm ? `<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="Scr2.s4Confirm()">✓ Confirm Next</button>` : ''}
+      ${completed ? '<div style="margin-top:8px;padding:6px 10px;background:var(--gbg);border-radius:var(--rd);font-size:11px;font-weight:600;color:var(--g);text-align:center">✅ Completed — ส่งเข้า Finance แล้ว</div>' : ''}
+      ${canConfirm ? `<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="Scr2.s4Confirm()">✓ Cash Collected</button>` : ''}
     </div>`;
   }
 
@@ -740,12 +860,14 @@ const Scr2 = (() => {
 
   // ═══ PUBLIC ═══
   return {
+    // Vendor search
+    vnShow, vnFilter, vnPick, vnCreate, vnDoCreate,
     // S1
-    renderS1, loadS1, s1Nav, s1Recalc, s1PickPhoto, s1HandlePhoto, s1Save,
+    renderS1, loadS1, s1Nav, s1Recalc, s1PickPhoto, s1HandlePhoto, s1RemoveExtra, s1Save,
     // S2
-    renderS2, loadS2, s2Nav, s2ShowPopup, s2SetPm, s2CalcTotal, s2HandlePhoto, s2Save, s2Delete, s2ConfirmDelete,
+    renderS2, loadS2, s2Nav, s2ShowPopup, s2SetPm, s2CalcTotal, s2PickPhoto, s2HandlePhoto, s2RemoveExtra, s2Save, s2Delete, s2ConfirmDelete,
     // S3
-    renderS3List, loadS3List, s3Reload, s3LoadMore, s3fCalc, s3fDateChange, s3fCnToggle, s3fHandlePhoto, s3fSave,
+    renderS3List, loadS3List, s3Reload, s3LoadMore, s3fCalc, s3fDateChange, s3fCnToggle, s3fPickPhoto, s3fHandlePhoto, s3fRemoveExtra, s3fSave,
     renderS3Form, loadS3Form,
     // S4
     renderS4, loadS4, s4Nav, s4Check, s4HandlePhoto, s4Submit, s4Confirm,

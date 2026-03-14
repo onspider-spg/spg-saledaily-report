@@ -1,5 +1,5 @@
 /**
- * Version 1.0.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -29,11 +29,11 @@ const App = (() => {
     'loading':        { render: () => renderLoading() },
     'no-access':      { render: () => renderNoAccess() },
     'dashboard':      { render: () => Scr.renderDashboard(),  onLoad: () => Scr.loadDashboard() },
-    'daily-sale':     { render: () => renderPlaceholder('Daily Sale — S1'), onLoad: null },
-    'expense':        { render: () => renderPlaceholder('Expense — S2'), onLoad: null },
-    'invoice':        { render: () => renderPlaceholder('Invoice — S3'), onLoad: null },
-    'invoice-form':   { render: () => renderPlaceholder('Invoice Form — S3'), onLoad: null },
-    'cash':           { render: () => renderPlaceholder('Cash On Hand — S4'), onLoad: null },
+    'daily-sale':     { render: () => Scr2.renderS1(),              onLoad: () => Scr2.loadS1() },
+    'expense':        { render: () => Scr2.renderS2(),              onLoad: () => Scr2.loadS2() },
+    'invoice':        { render: () => Scr2.renderS3List(),          onLoad: () => Scr2.loadS3List() },
+    'invoice-form':   { render: (p) => Scr2.renderS3Form(p),       onLoad: (p) => Scr2.loadS3Form(p) },
+    'cash':           { render: () => Scr2.renderS4(),              onLoad: () => Scr2.loadS4() },
     'sale-history':   { render: () => renderPlaceholder('Sale History — S5'), onLoad: null },
     'expense-history':{ render: () => renderPlaceholder('Expense History — S6'), onLoad: null },
     'daily-report':   { render: () => renderPlaceholder('Daily Report — S8'), onLoad: null },

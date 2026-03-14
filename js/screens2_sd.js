@@ -1,5 +1,5 @@
 /**
- * Version 1.2.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.3 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -260,10 +260,6 @@ const Scr2 = (() => {
         <select class="fi" id="s2f-vendor"><option value="">-- เลือก Vendor --</option>${vendors.map(v => `<option value="${e(v.name)}" ${ex?.vendor_name === v.name ? 'selected' : ''}>${e(v.name)}</option>`).join('')}</select></div>
       <div class="fg"><label class="fl">Doc Number <span class="req">*</span></label><input class="fi" id="s2f-doc" value="${e(ex?.doc_number || '')}"></div>
       <div class="fg"><label class="fl">Description <span class="req">*</span></label><input class="fi" id="s2f-desc" value="${e(ex?.description || '')}"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="fg"><label class="fl">Main Category <span class="req">*</span></label><input class="fi" id="s2f-maincat" value="${e(ex?.main_category || '')}"></div>
-        <div class="fg"><label class="fl">Sub Category</label><input class="fi" id="s2f-subcat" value="${e(ex?.sub_category || '')}"></div>
-      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div class="fg"><label class="fl">Amount (ex GST) <span class="req">*</span></label><input class="fi" type="number" step="0.01" id="s2f-amt" value="${ex?.amount_ex_gst || ''}" oninput="Scr2.s2CalcTotal()"></div>
         <div class="fg"><label class="fl">GST</label><input class="fi" type="number" step="0.01" id="s2f-gst" value="${ex?.gst || '0'}" oninput="Scr2.s2CalcTotal()"></div>
@@ -326,8 +322,6 @@ const Scr2 = (() => {
         vendor_name: document.getElementById('s2f-vendor')?.value,
         doc_number: document.getElementById('s2f-doc')?.value,
         description: document.getElementById('s2f-desc')?.value,
-        main_category: document.getElementById('s2f-maincat')?.value,
-        sub_category: document.getElementById('s2f-subcat')?.value,
         amount_ex_gst: document.getElementById('s2f-amt')?.value,
         gst: document.getElementById('s2f-gst')?.value || '0',
         payment_method: document.getElementById('s2f-pm-val')?.value || 'cash',
@@ -461,7 +455,6 @@ const Scr2 = (() => {
           <div style="font-size:10px;color:var(--t3);margin-top:2px">จ่ายผ่านหน้า Expense เมื่อถึงวัน Due</div>
         </div>
         <div class="fg"><label class="fl">Due Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-due" min="${App.addDays(td(), 1)}"></div>
-        <div class="fg"><label class="fl">📝 Note</label><input class="fi" id="s3f-note"></div>
         <div class="divider"></div>
         <div class="fg"><label class="fl">🔄 Credit Note</label><div class="chips" style="margin:0" id="s3f-cn-toggle">
           <div class="chip on" onclick="Scr2.s3fCnToggle(false,this)">No</div>
@@ -498,7 +491,6 @@ const Scr2 = (() => {
     document.getElementById('s3f-amt').value = inv.amount_ex_gst;
     document.getElementById('s3f-gst').value = inv.gst;
     document.getElementById('s3f-due').value = inv.due_date || '';
-    document.getElementById('s3f-note').value = inv.note || '';
     if (inv.photo_url) {
       const box = document.getElementById('s3f-photo-box');
       if (box) { box.innerHTML = `<img src="${inv.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; }
@@ -575,7 +567,6 @@ const Scr2 = (() => {
         amount_ex_gst: document.getElementById('s3f-amt')?.value,
         gst: document.getElementById('s3f-gst')?.value || '0',
         due_date: document.getElementById('s3f-due')?.value,
-        note: document.getElementById('s3f-note')?.value,
         photo_url: s3f.photoUrl,
         invoice_id: s3f.id,
         has_credit_note: s3f.hasCN,

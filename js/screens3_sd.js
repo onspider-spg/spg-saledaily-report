@@ -1,5 +1,5 @@
 /**
- * Version 1.2 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.3 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -17,14 +17,23 @@ const Scr3 = (() => {
   }
 
   // ═══════════════════════════════════════════
-  // S5: SALE HISTORY (default 3 days, LIMIT 10, load more)
+  // S5: SALE HISTORY (date range, default 3 days, LIMIT 10, load more, sync lock)
   // ═══════════════════════════════════════════
-  let s5 = { records: [], offset: 0 };
+  let s5 = { records: [], offset: 0, dateFrom: '', dateTo: '' };
 
   function renderS5() {
+    const now = td();
+    s5.dateTo = s5.dateTo || now;
+    s5.dateFrom = s5.dateFrom || App.addDays(now, -3);
     return `${toolbar('Sale History')}
     <div class="content" id="s5-content">
       ${App.renderStoreSelector()}
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px">
+        <span>📅</span>
+        <input class="fi" type="date" style="flex:1;padding:6px 8px" id="s5-from" value="${s5.dateFrom}" onchange="Scr3.s5Reload()">
+        <span style="color:var(--t3)">→</span>
+        <input class="fi" type="date" style="flex:1;padding:6px 8px" id="s5-to" value="${s5.dateTo}" onchange="Scr3.s5Reload()">
+      </div>
       <div id="s5-kpi" class="kpi-row kpi-3"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
       <div id="s5-list"><div class="skeleton sk-card"></div></div>
       <div id="s5-more" style="display:none;text-align:center;padding:10px">
@@ -33,11 +42,19 @@ const Scr3 = (() => {
     </div>`;
   }
 
+  function s5Reload() {
+    s5.dateFrom = document.getElementById('s5-from')?.value || s5.dateFrom;
+    s5.dateTo = document.getElementById('s5-to')?.value || s5.dateTo;
+    loadS5(true);
+  }
+
   async function loadS5(reset) {
     if (reset) { s5.records = []; s5.offset = 0; }
     if (_busy.s5) return; _busy.s5 = true;
     try {
-      const data = await API.getSaleHistory({ days: 30, limit: 10, offset: s5.offset });
+      s5.dateFrom = document.getElementById('s5-from')?.value || s5.dateFrom;
+      s5.dateTo = document.getElementById('s5-to')?.value || s5.dateTo;
+      const data = await API.getSaleHistory({ date_from: s5.dateFrom, date_to: s5.dateTo, limit: 10, offset: s5.offset });
       const newRecs = data.records || [];
       s5.records = s5.offset === 0 ? newRecs : [...s5.records, ...newRecs];
       fillS5();
@@ -47,7 +64,6 @@ const Scr3 = (() => {
   }
 
   function fillS5() {
-    // KPI from records
     const total = s5.records.reduce((s, r) => s + (r.total_sales || 0), 0);
     const cnt = s5.records.length;
     const avg = cnt > 0 ? Math.round(total / cnt) : 0;
@@ -63,12 +79,12 @@ const Scr3 = (() => {
       const synced = r.sync_status === 'synced';
       const channels = r.sd_sale_channels || [];
       const chText = channels.map(c => `${c.channel_key}: ${fm(c.amount)}`).join(' · ');
-      return `<div class="card" style="padding:10px;cursor:pointer" onclick="App.go('daily-hub')">
+      return `<div class="card" style="padding:10px;cursor:pointer;${synced ? 'background:var(--bg3)' : ''}" onclick="App.go('daily-hub')">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
           <div><div style="font-size:12px;font-weight:700">${App.fmtDate(r.sale_date)}</div>
           <div style="font-size:10px;color:var(--t3)">${e(r.store_id)} · ${channels.length} ch</div></div>
           <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--gold)">${fm(r.total_sales)}</div>
-          <span class="sts ${synced ? 'sts-ok' : 'sts-pend'}">${synced ? 'Synced' : 'Pending'}</span></div>
+          ${synced ? '<span class="sts sts-lock">🔒 Synced</span>' : '<span class="sts sts-ok">✏️ Editable</span>'}</div>
         </div>
         ${channels.length ? `<details style="font-size:10px;color:var(--t3)"><summary>▸ Channel breakdown</summary><div style="padding:4px 0">${chText}</div></details>` : ''}
       </div>`;
@@ -79,14 +95,23 @@ const Scr3 = (() => {
 
 
   // ═══════════════════════════════════════════
-  // S6: EXPENSE HISTORY (default 3 days, filter: all/expense/invoice)
+  // S6: EXPENSE HISTORY (date range, default 3 days, filter: all/expense/invoice, sync lock)
   // ═══════════════════════════════════════════
-  let s6 = { expenses: [], invoices: [], filter: 'all', offset: 0 };
+  let s6 = { expenses: [], invoices: [], filter: 'all', offset: 0, dateFrom: '', dateTo: '' };
 
   function renderS6() {
+    const now = td();
+    s6.dateTo = s6.dateTo || now;
+    s6.dateFrom = s6.dateFrom || App.addDays(now, -3);
     return `${toolbar('Expense History')}
     <div class="content" id="s6-content">
       ${App.renderStoreSelector()}
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px">
+        <span>📅</span>
+        <input class="fi" type="date" style="flex:1;padding:6px 8px" id="s6-from" value="${s6.dateFrom}" onchange="Scr3.s6Reload()">
+        <span style="color:var(--t3)">→</span>
+        <input class="fi" type="date" style="flex:1;padding:6px 8px" id="s6-to" value="${s6.dateTo}" onchange="Scr3.s6Reload()">
+      </div>
       <div class="chips" id="s6-filter">
         <div class="chip on" onclick="Scr3.s6SetFilter('all',this)">All</div>
         <div class="chip" onclick="Scr3.s6SetFilter('expense',this)">Expense</div>
@@ -99,11 +124,19 @@ const Scr3 = (() => {
     </div>`;
   }
 
+  function s6Reload() {
+    s6.dateFrom = document.getElementById('s6-from')?.value || s6.dateFrom;
+    s6.dateTo = document.getElementById('s6-to')?.value || s6.dateTo;
+    loadS6(true);
+  }
+
   async function loadS6(reset) {
     if (reset) { s6.expenses = []; s6.invoices = []; s6.offset = 0; }
     if (_busy.s6) return; _busy.s6 = true;
     try {
-      const data = await API.getExpenseHistory({ days: 30, limit: 10, offset: s6.offset, filter: s6.filter });
+      s6.dateFrom = document.getElementById('s6-from')?.value || s6.dateFrom;
+      s6.dateTo = document.getElementById('s6-to')?.value || s6.dateTo;
+      const data = await API.getExpenseHistory({ date_from: s6.dateFrom, date_to: s6.dateTo, limit: 10, offset: s6.offset, filter: s6.filter });
       if (s6.offset === 0) { s6.expenses = data.expenses || []; s6.invoices = data.invoices || []; }
       else { s6.expenses = [...s6.expenses, ...(data.expenses || [])]; s6.invoices = [...s6.invoices, ...(data.invoices || [])]; }
       fillS6();
@@ -115,8 +148,8 @@ const Scr3 = (() => {
     const el = document.getElementById('s6-list');
     if (!el) return;
     let items = [];
-    if (s6.filter !== 'invoice') items.push(...s6.expenses.map(x => ({ ...x, _type: 'expense', _date: x.expense_date })));
-    if (s6.filter !== 'expense') items.push(...s6.invoices.map(x => ({ ...x, _type: 'invoice', _date: x.invoice_date })));
+    if (s6.filter !== 'invoice') items.push(...s6.expenses.map(x => ({ ...x, _type: 'expense', _date: x.expense_date, _synced: x.sync_status === 'synced' })));
+    if (s6.filter !== 'expense') items.push(...s6.invoices.map(x => ({ ...x, _type: 'invoice', _date: x.invoice_date, _synced: x.sync_status === 'synced' })));
     items.sort((a, b) => b._date.localeCompare(a._date));
 
     if (!items.length) { el.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>'; return; }
@@ -124,9 +157,10 @@ const Scr3 = (() => {
       const isInv = it._type === 'invoice';
       const tag = isInv ? `<span class="tag tag-o">Invoice</span>` : `<span class="tag tag-gray">Bill</span>`;
       const statusTag = isInv ? `<span class="sts ${it.payment_status === 'paid' ? 'sts-ok' : 'sts-err'}">${it.payment_status}</span>` : '';
-      return `<div class="li-card"><div style="display:flex;justify-content:space-between">
+      const lockTag = it._synced ? '<span class="sts sts-lock">🔒</span>' : '';
+      return `<div class="li-card" style="${it._synced ? 'background:var(--bg3)' : ''}"><div style="display:flex;justify-content:space-between">
         <div><div style="font-size:12px;font-weight:700">${e(it.description || it.invoice_no)}</div>
-        <div style="font-size:10px;color:var(--t3)">${e(it.vendor_name)} · ${it._date} · ${tag}</div></div>
+        <div style="font-size:10px;color:var(--t3)">${e(it.vendor_name)} · ${it._date} · ${tag} ${lockTag}</div></div>
         <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--r)">-${fm(it.total_amount)}</div>${statusTag}</div>
       </div></div>`;
     }).join('');
@@ -775,8 +809,8 @@ const Scr3 = (() => {
 
   // ═══ PUBLIC ═══
   return {
-    renderS5, loadS5, s5LoadMore,
-    renderS6, loadS6, s6SetFilter, s6LoadMore,
+    renderS5, loadS5, s5Reload, s5LoadMore,
+    renderS6, loadS6, s6Reload, s6SetFilter, s6LoadMore,
     renderS8, loadS8, s8Nav, s8SetTab, s8Pick, s8IncChange,
     s8LeftUpdate, s8LeftRemove, s8AddLeftover,
     s8ToggleTask, s8NewTask, s8SaveNewTask,

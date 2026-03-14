@@ -1,5 +1,5 @@
 /**
- * Version 1.4 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -217,6 +217,7 @@ const Scr3 = (() => {
       <div style="display:flex;gap:8px;margin-top:12px;padding-bottom:8px">
         <button class="btn btn-gold" style="flex:1;padding:10px" id="s8-save" onclick="Scr3.s8Save()">💾 บันทึก</button>
         <button class="btn btn-outline" style="flex:1" onclick="Scr3.s8Copy()">📋 Copy</button>
+        <button class="btn btn-outline" style="flex:0 0 44px;display:none" id="s8-share-btn" onclick="Scr3.s8Share()">📤</button>
       </div>
     </div>`;
   }
@@ -248,6 +249,7 @@ const Scr3 = (() => {
       s8.tasks = repData.tasks || [];
       s8.summary = sumData;
       fillS8Tab();
+      if (navigator.share) { const sb = document.getElementById('s8-share-btn'); if (sb) sb.style.display = ''; }
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
     finally { _busy.s8 = false; }
   }
@@ -434,45 +436,71 @@ const Scr3 = (() => {
   }
 
   function fillS8Tasks(el) {
-    const pending = s8.tasks.filter(t => t.status === 'pending');
-    const done = s8.tasks.filter(t => t.status === 'done');
-
     // Equipment repairs for selected date
-    const repairs = s8.tasks.filter(t => t.type === 'equipment' && t.report_date === s8.date);
-    const priTags = { critical: 'tag-r', urgent: 'tag-o', normal: 'tag-b', low: 'tag-gray' };
+    const equipTasks = s8.tasks.filter(t => t.type === 'equipment' && t.report_date === s8.date);
+    const pending = s8.tasks.filter(t => t.status === 'pending');
+    const uMap = { critical: '🔴', high: '🟠', low: '🟡', dispose: '⚫' };
 
-    const repairSection = `<div class="card" style="border-left:3px solid var(--o);margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div style="font-size:12px;font-weight:700">🔧 แจ้งซ่อมอุปกรณ์</div>
-        <button class="btn btn-outline btn-sm" style="color:var(--o);border-color:var(--o)" onclick="Scr3.s8NewRepair()">+แจ้งซ่อม</button>
+    el.innerHTML = `
+      <div class="sl" style="margin-top:0">🔧 Equipment Repair Report</div>
+      <div class="card" style="padding:10px;margin-bottom:10px">
+        <div class="fg" style="margin-bottom:6px"><label class="fl">ชื่ออุปกรณ์ / เครื่อง</label>
+          <input class="fi" id="s8-eq-name" placeholder="เช่น เครื่องทำน้ำแข็ง, เตาอบ..."></div>
+        <div class="fg" style="margin-bottom:6px"><label class="fl">อาการ</label>
+          <input class="fi" id="s8-eq-symptom" placeholder="เช่น ไม่ทำความเย็น, มีเสียงดัง..."></div>
+        <div class="fg" style="margin-bottom:8px"><label class="fl">ความเร่งด่วน</label>
+          <select class="fi" id="s8-eq-urgency">
+            <option value="">— เลือก —</option>
+            <option value="critical">🔴 ใช้งานไม่ได้ ต้องซ่อมทันที</option>
+            <option value="high">🟠 ควรซ่อมเร็ว</option>
+            <option value="low">🟡 ไม่รีบ ซ่อมเมื่อมีเวลา</option>
+            <option value="dispose">⚫ ไม่ซ่อม — ทิ้ง</option>
+          </select></div>
+        <button class="btn btn-gold btn-full" id="s8-eq-save" onclick="Scr3.s8AddEquipment()">+ แจ้งซ่อม</button>
       </div>
-      <div style="font-size:10px;color:var(--t3);margin-bottom:6px">📅 ${App.fmtDate(s8.date)}</div>
-      ${repairs.length ? repairs.map(r => {
-        const isDone = r.status === 'done';
-        const tagCls = priTags[r.priority] || 'tag-gray';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--bd2)">
-          <span>🔧</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:11px;font-weight:600;${isDone ? 'text-decoration:line-through;color:var(--t3)' : ''}">${e(r.title)}</div>
-            ${r.note ? `<div style="font-size:10px;color:var(--t3)">${e(r.note)}</div>` : ''}
+      ${equipTasks.length ? `<div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">🔧 รายการแจ้งซ่อม (${equipTasks.length})</div>
+        ${equipTasks.map(t => `<div class="card" style="padding:8px 10px;margin-bottom:4px;border-left:3px solid var(--o)">
+          <div style="font-size:12px;font-weight:600">${uMap[t.priority] || '🔧'} ${e(t.title)}</div>
+          ${t.note ? `<div style="font-size:10px;color:var(--t3);margin-top:2px">${e(t.note)}</div>` : ''}
+        </div>`).join('')}` : ''}
+
+      <div class="sl">📋 เพิ่มงานติดตาม</div>
+      <div class="card" style="padding:10px;margin-bottom:10px">
+        <input class="fi" id="s8-task-title" placeholder="เช่น โทรสั่ง stock เพิ่ม, นัดประชุมทีม..." style="margin-bottom:6px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input class="fi" id="s8-task-assign" placeholder="มอบหมายให้..." style="flex:1">
+          <select class="fi" id="s8-task-pri" style="width:100px">
+            <option value="normal">📋 ปกติ</option>
+            <option value="urgent">🚨 ด่วน</option>
+          </select>
+        </div>
+        <button class="btn btn-gold btn-full" id="s8-task-save" onclick="Scr3.s8AddTask('follow_up')">+ เพิ่มงาน</button>
+      </div>
+
+      <div class="sl">💡 เพิ่ม Suggestion</div>
+      <div class="card" style="padding:10px;margin-bottom:12px">
+        <input class="fi" id="s8-sug-title" placeholder="เช่น ลองเพิ่มเมนูใหม่, ปรับ layout..." style="margin-bottom:8px">
+        <button class="btn btn-outline btn-full" id="s8-sug-save" onclick="Scr3.s8AddTask('suggestion')">+ เพิ่ม Suggestion</button>
+      </div>
+
+      <div class="sl">⏳ ค้าง (${pending.length})</div>
+      <div id="s8-pending-list">${pending.length ? pending.map(t => {
+        const isSug = t.type === 'suggestion';
+        const isEquip = t.type === 'equipment';
+        const icon = isEquip ? '🔧' : isSug ? '💡' : (t.priority === 'urgent' ? '🚨' : '⏳');
+        const bc = isSug ? 'var(--acc)' : isEquip ? 'var(--o)' : (t.priority === 'urgent' ? 'var(--r)' : 'var(--gold)');
+        return `<div class="card" style="padding:10px;margin-bottom:4px;border-left:3px solid ${bc}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:14px">${icon}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600">${e(t.title)}</div>
+              ${t.note ? `<div style="font-size:10px;color:var(--t3);margin-top:2px">${e(t.note)}</div>` : ''}
+              ${t.assigned_to ? `<div style="font-size:10px;color:var(--t3)">👤 ${e(t.assigned_to)}</div>` : ''}
+            </div>
+            <button class="cnt-btn" style="color:var(--g);border-color:var(--g);font-size:14px;width:28px;height:28px" onclick="Scr3.s8ToggleTask('${t.id}','done')">✓</button>
           </div>
-          <span class="tag ${tagCls}" style="font-size:8px">${e(r.priority)}</span>
-          ${isDone ? '<span style="font-size:10px;color:var(--g)">✅</span>' : `<button class="cnt-btn" style="color:var(--g);border-color:var(--g)" onclick="Scr3.s8ToggleTask('${r.id}','done')">✓</button>`}
         </div>`;
-      }).join('') : '<div style="font-size:11px;color:var(--t3);padding:4px 0">ไม่มีรายการแจ้งซ่อมวันนี้</div>'}
-    </div>`;
-
-    // Non-equipment tasks
-    const pendingOther = pending.filter(t => !(t.type === 'equipment' && t.report_date === s8.date));
-    const doneOther = done.filter(t => !(t.type === 'equipment' && t.report_date === s8.date));
-
-    el.innerHTML = `${repairSection}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="sl" style="margin:0">📋 Tasks (${pendingOther.length + doneOther.length})</div>
-        <button class="btn btn-primary btn-sm" onclick="Scr3.s8NewTask()">+ New</button>
-      </div>
-      ${pendingOther.map(t => taskCard(t, true)).join('')}
-      ${doneOther.length ? `<div class="sl">✅ Done</div>${doneOther.map(t => taskCard(t, false)).join('')}` : ''}`;
+      }).join('') : '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px">ไม่มีงานค้าง</div>'}</div>`;
   }
 
   function taskCard(t, canComplete, toggleFn) {
@@ -659,6 +687,57 @@ const Scr3 = (() => {
     finally { if (btn) btn.disabled = false; }
   }
 
+  // ─── C3: Inline Tab 3 save functions ───
+  async function s8AddEquipment() {
+    const name = document.getElementById('s8-eq-name')?.value?.trim();
+    const symptom = document.getElementById('s8-eq-symptom')?.value?.trim();
+    const urgency = document.getElementById('s8-eq-urgency')?.value;
+    if (!name) return App.toast('กรุณาใส่ชื่ออุปกรณ์', 'error');
+    if (!symptom) return App.toast('กรุณาใส่อาการ', 'error');
+    if (!urgency) return App.toast('กรุณาเลือกความเร่งด่วน', 'error');
+    const btn = document.getElementById('s8-eq-save'); if (btn) btn.disabled = true;
+    try {
+      const uMap = { critical: '🔴 ซ่อมทันที', high: '🟠 ควรซ่อมเร็ว', low: '🟡 ไม่รีบ', dispose: '⚫ ทิ้ง' };
+      const pri = urgency === 'critical' ? 'urgent' : 'normal';
+      const data = await API.createTask({
+        store_id: API.getStore(), title: '🔧 ' + name,
+        note: symptom + ' [' + (uMap[urgency] || urgency) + ']',
+        type: 'equipment', priority: pri, report_date: s8.date,
+      });
+      s8.tasks.push(data);
+      App.toast('แจ้งซ่อมสำเร็จ', 'success');
+      // Clear inputs
+      const n = document.getElementById('s8-eq-name'); if (n) n.value = '';
+      const sy = document.getElementById('s8-eq-symptom'); if (sy) sy.value = '';
+      const u = document.getElementById('s8-eq-urgency'); if (u) u.value = '';
+      fillS8Tab();
+    } catch (err) { App.toast(err.message || 'แจ้งซ่อมไม่สำเร็จ', 'error'); }
+    finally { if (btn) btn.disabled = false; }
+  }
+
+  async function s8AddTask(type) {
+    const isTask = type === 'follow_up';
+    const titleEl = document.getElementById(isTask ? 's8-task-title' : 's8-sug-title');
+    const title = (titleEl?.value || '').trim();
+    if (!title) return App.toast('กรุณากรอกหัวข้อ', 'error');
+    const btnId = isTask ? 's8-task-save' : 's8-sug-save';
+    const btn = document.getElementById(btnId); if (btn) btn.disabled = true;
+    try {
+      const data = await API.createTask({
+        store_id: API.getStore(), title, type,
+        assigned_to: isTask ? (document.getElementById('s8-task-assign')?.value || '') : '',
+        priority: isTask ? (document.getElementById('s8-task-pri')?.value || 'normal') : 'normal',
+        note: '', report_date: s8.date,
+      });
+      s8.tasks.push(data);
+      App.toast(isTask ? '📋 เพิ่มงานแล้ว' : '💡 เพิ่ม Suggestion แล้ว', 'success');
+      if (titleEl) titleEl.value = '';
+      if (isTask) { const a = document.getElementById('s8-task-assign'); if (a) a.value = ''; }
+      fillS8Tab();
+    } catch (err) { App.toast(err.message || 'เพิ่มไม่สำเร็จ', 'error'); }
+    finally { if (btn) btn.disabled = false; }
+  }
+
   async function s8Save() {
     const btn = document.getElementById('s8-save'); if (btn) btn.disabled = true;
     try {
@@ -715,19 +794,110 @@ const Scr3 = (() => {
     finally { if (btn) btn.disabled = false; }
   }
 
-  function s8Copy() {
+  let _lastReportText = '';
+
+  async function s8Copy() {
     const r = s8.report || {};
     const sm = s8.summary || {};
-    const text = [
-      `📅 ${App.fmtDate(s8.date)} — Daily Report`,
-      `Store: ${API.getStore()}`,
-      `💰 Sales: ${fm(sm.total_sales || 0)}`,
-      `🧾 Expense: ${fm(sm.total_expense || 0)}`,
-      `🌤️ Weather: ${r.weather || '—'}`,
-      `🧑‍🤝‍🧑 Traffic: ${r.traffic || '—'}`,
-      s8.incidents.filter(i => i.count > 0).map(i => `⚠️ ${i.category}: ${i.count}`).join('\n'),
-    ].filter(Boolean).join('\n');
-    navigator.clipboard?.writeText(text)?.then(() => App.toast('Copied!', 'success')).catch(() => App.toast('Copy failed', 'error'));
+    const session = API.getSession();
+    const storeName = session?.store_name || API.getStore();
+    const reporter = session?.full_name || session?.display_name || '';
+    const channels = sm.channels || [];
+    const expenses = sm.expenses || [];
+    const cash = sm.cash;
+    const wMap = { sunny: '☀️ แดด', cloudy: '☁️ ครึ้ม', rain: '🌧️ ฝน', heavy_rain: '⛈️ ฝนหนัก' };
+    const tMap = { above: '📈 ดีกว่าปกติ', normal: '➡️ ปกติ', below: '📉 ต่ำกว่าปกติ' };
+    const pMap = { ok: '✅ ปกติ', issue: '⚠️ มีปัญหา' };
+
+    let text = `📋 Daily Report — ${storeName}\n📅 ${App.fmtDate(s8.date)}\n🧑 ผู้รายงาน: ${reporter}\n━━━━━━━━━━━━━━━\n\n`;
+
+    // Sales
+    text += '💰 ยอดขาย\n';
+    if (channels.length) { channels.forEach(c => { text += `  ${c.channel_key}: ${fm(c.amount)}\n`; }); text += `  Total: ${fm(sm.total_sales || 0)}\n`; }
+    else text += '  ยังไม่มีข้อมูล\n';
+    text += '\n';
+
+    // Expenses
+    text += '🧾 ค่าใช้จ่าย\n';
+    if (expenses.length) { expenses.forEach(x => { text += `  ${x.vendor_name || x.description || '—'}: -${fm(x.total_amount)}\n`; }); text += `  รวม ${expenses.length} รายการ: -${fm(expenses.reduce((s, x) => s + (x.total_amount || 0), 0))}\n`; }
+    else text += '  ไม่มี\n';
+    text += '\n';
+
+    // Cash
+    text += '💵 Cash on Hand\n';
+    if (cash) {
+      text += `  Expected: ${fm(cash.expected_cash || cash.expected || 0)}\n  Actual: ${fm(cash.actual_cash || cash.actual || 0)}\n  Diff: ${fm(cash.difference || cash.variance || 0)}\n`;
+      text += cash.is_matched ? '  ✅ เงินตรง\n' : `  🔴 เงินไม่ตรง!${cash.mismatch_reason || cash.reason ? ' — ' + (cash.mismatch_reason || cash.reason) : ''}\n`;
+    } else text += '  ยังไม่ได้นับเงิน\n';
+    text += '\n';
+
+    // Weather/Traffic/POS
+    const rw = _s8Weather || r.weather, rt = _s8Traffic || r.traffic, rp = _s8PosStatus || r.pos_status;
+    text += `🌤️ สภาพร้าน\n  อากาศ: ${wMap[rw] || '—'}\n  Traffic: ${tMap[rt] || '—'}\n  POS: ${pMap[rp] || '—'}\n`;
+    const note = document.getElementById('s8-note')?.value || r.overview_note || '';
+    if (note) text += `  📝 ภาพรวม: ${note}\n`;
+    text += '\n';
+
+    // Customer insights
+    const custs = [['🌅 เช้า', 's8-cust-morning', 'customer_morning'], ['☀️ กลางวัน', 's8-cust-midday', 'customer_midday'],
+      ['🌤️ บ่าย', 's8-cust-afternoon', 'customer_afternoon'], ['🌆 เย็น', 's8-cust-evening', 'customer_evening'],
+      ['🌙 ค่ำ', 's8-cust-night', 'customer_night']].filter(c => (document.getElementById(c[1])?.value || r[c[2]]));
+    if (custs.length) { text += '🧑‍🤝‍🧑 กลุ่มลูกค้า\n'; custs.forEach(c => { text += `  ${c[0]}: ${document.getElementById(c[1])?.value || r[c[2]]}\n`; }); text += '\n'; }
+
+    // Waste
+    const hasWaste = _s8Waste ?? r.has_waste;
+    text += `🍞 Waste: ${hasWaste === true ? '✅ มี waste' : hasWaste === false ? '❌ ไม่มี waste' : '— ยังไม่ตอบ'}\n\n`;
+
+    // Incidents
+    const activeInc = INCIDENT_CATS.filter(c => (s8.incidents.find(i => i.category === c.key)?.count || 0) > 0);
+    if (activeInc.length) {
+      const total = activeInc.reduce((s, c) => s + (s8.incidents.find(i => i.category === c.key)?.count || 0), 0);
+      text += `⚠️ เหตุการณ์ (${total} รายการ)\n`;
+      activeInc.forEach(c => { const inc = s8.incidents.find(i => i.category === c.key);
+        text += `  ${c.icon} ${c.name} ×${inc.count}\n`;
+        (inc.notes || []).forEach((n, i) => { if (n) text += `    ${i + 1}. ${n}\n`; });
+      }); text += '\n';
+    }
+
+    // Leftovers
+    const activeLft = s8.leftovers.filter(l => (l.item_name || '').trim());
+    if (activeLft.length) {
+      const lvMap = { little: '🟢 นิดหน่อย', half: '🟡 ครึ่งนึง', almost_full: '🔴 เกือบหมด', full: '⚫ ทั้งจาน' };
+      text += '🍚 อาหารเหลือ\n';
+      activeLft.forEach(l => { text += `  ${l.item_name} ×${l.quantity} (${lvMap[l.level] || l.level})\n`; });
+      text += '\n';
+    }
+
+    // Equipment
+    const equipTasks = s8.tasks.filter(t => t.type === 'equipment' && t.report_date === s8.date);
+    if (equipTasks.length) { text += `🔧 แจ้งซ่อม (${equipTasks.length})\n`; equipTasks.forEach(t => { text += `  ${t.title}${t.note ? ' — ' + t.note : ''}\n`; }); text += '\n'; }
+
+    // Follow-up tasks
+    const followTasks = s8.tasks.filter(t => t.type === 'follow_up' && t.status === 'pending');
+    if (followTasks.length) { text += `📋 งานติดตาม (${followTasks.length})\n`; followTasks.forEach(t => { text += `  ${t.priority === 'urgent' ? '🚨' : '⏳'} ${t.title}${t.assigned_to ? ' → ' + t.assigned_to : ''}\n`; }); text += '\n'; }
+
+    // Suggestions
+    const sugTasks = s8.tasks.filter(t => t.type === 'suggestion' && t.status === 'pending');
+    if (sugTasks.length) { text += `💡 Suggestion (${sugTasks.length})\n`; sugTasks.forEach(t => { text += `  ${t.title}\n`; }); text += '\n'; }
+
+    _lastReportText = text;
+
+    // Copy to clipboard
+    try {
+      if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+    } catch {}
+
+    // Auto-save (fire-and-forget)
+    try { await s8Save(); App.toast('📋 Copy แล้ว! วางใน LINE ได้เลย', 'success'); }
+    catch { App.toast('📋 Copy แล้ว แต่บันทึกไม่สำเร็จ', 'info'); }
+  }
+
+  async function s8Share() {
+    if (!_lastReportText) await s8Copy();
+    if (!_lastReportText) return;
+    try { await navigator.share({ text: _lastReportText }); }
+    catch (err) { if (err.name !== 'AbortError') App.toast('Share ไม่ได้ — Copy ไว้แล้ว วางได้เลย', 'info'); }
   }
 
 
@@ -937,7 +1107,8 @@ const Scr3 = (() => {
     s8LeftUpdate, s8LeftRemove, s8AddLeftover, s8LeftLevel,
     s8ToggleTask, s8NewTask, s8SaveNewTask,
     s8NewRepair, s8SetUrgency, s8SaveRepair,
-    s8Save, s8Copy,
+    s8AddEquipment, s8AddTask,
+    s8Save, s8Copy, s8Share,
     renderTasks, loadTasks, tkFilter, tkNewTask, tkSaveNew, tkToggle,
     renderDH, loadDH, dhSelect,
   };

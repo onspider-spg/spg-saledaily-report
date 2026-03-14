@@ -1,5 +1,5 @@
 /**
- * Version 1.2.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.3 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
@@ -24,28 +24,41 @@ const Scr4 = (() => {
   }
 
   // ═══════════════════════════════════════════
-  // ACC REVIEW — Sync management
+  // ACC REVIEW — Month selector + All stores
   // ═══════════════════════════════════════════
-  let ar = { days: [], kpis: {} };
+  let ar = { days: [], stores: [], kpis: {}, month: '' };
+
+  function arMonthLabel(m) { const p = m.split('-'); const ms = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return ms[parseInt(p[1])] + ' ' + p[0]; }
 
   function renderAccReview() {
+    ar.month = ar.month || new Date().toISOString().substring(0, 7);
     return `${toolbar('Account Review')}
     <div class="content" id="ar-content">
-      ${App.renderStoreSelector()}
-      <div class="alert alert-info">📋 ข้อมูลแก้ไขย้อนหลังได้ 3 วัน · เกิน 3 วัน = auto-sync · กด 🔒 Sync = ส่งข้อมูลไป Finance ทันที</div>
-      <div id="ar-table"><div class="skeleton sk-card" style="height:200px"></div></div>
-      <div id="ar-summary" style="margin-top:12px;padding:10px;background:var(--bg3);border-radius:var(--rd);font-size:11px;color:var(--t2)">
-        <b>กฎ:</b> Editable = ยังแก้ไขได้ · 🔒 Synced = ส่งไป Finance แล้ว · เกิน edit window → auto-sync
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 0 10px;font-size:13px;font-weight:600">
+        <span class="dbar-btn" onclick="Scr4.arMonthNav(-1)">‹</span>
+        <span id="ar-month-label">📅 ${arMonthLabel(ar.month)}</span>
+        <span class="dbar-btn" onclick="Scr4.arMonthNav(1)">›</span>
       </div>
+      <div class="alert alert-info" style="font-size:10px">📋 Editable = ยังแก้ไขได้ · 🔒 Synced = ส่งไป Finance แล้ว · เกิน edit window → auto-sync</div>
+      <div id="ar-kpi" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
+      <div id="ar-table"><div class="skeleton sk-card" style="height:200px"></div></div>
     </div>`;
   }
 
+  function arMonthNav(delta) {
+    const p = ar.month.split('-');
+    const d = new Date(parseInt(p[0]), parseInt(p[1]) - 1 + delta, 1);
+    ar.month = d.toISOString().substring(0, 7);
+    document.getElementById('ar-month-label').textContent = '📅 ' + arMonthLabel(ar.month);
+    loadAccReview();
+  }
+
   async function loadAccReview() {
-    if (needStore('ar-table')) return;
     if (_busy.ar) return; _busy.ar = true;
     try {
-      const data = await API.getAccReview();
+      const data = await API.getAccReview(ar.month);
       ar.days = data.days || [];
+      ar.stores = data.stores || [];
       ar.kpis = data.kpis || {};
       fillAccReview();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
@@ -55,68 +68,85 @@ const Scr4 = (() => {
   function fillAccReview() {
     const el = document.getElementById('ar-table');
     if (!el) return;
-    if (!ar.days.length) { el.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>'; return; }
+    const k = ar.kpis;
     const isT1 = (App.S.session?.tier_level || 99) <= 1;
 
-    el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Date</th><th>Sales</th><th>Expense</th><th>Status</th><th></th></tr></thead>
-    <tbody>${ar.days.map(d => {
+    // KPIs
+    document.getElementById('ar-kpi').innerHTML = `
+      <div class="kpi-box"><div class="kpi-label">💰 Sales</div><div class="kpi-val" style="font-size:13px;color:var(--gold)">${App.fmtMoneyShort(k.total_sale || 0)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">🧾 Expense</div><div class="kpi-val" style="font-size:13px;color:var(--r)">${App.fmtMoneyShort(k.total_expense || 0)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">🔒 Synced</div><div class="kpi-val" style="font-size:13px;color:var(--g)">${k.synced || 0}</div></div>
+      <div class="kpi-box"><div class="kpi-label">✏️ Pending</div><div class="kpi-val" style="font-size:13px;color:var(--o)">${k.unsynced || 0}</div></div>`;
+
+    if (!ar.days.length) { el.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูลเดือนนี้</div>'; return; }
+
+    // Group by date
+    const byDate = {};
+    ar.days.forEach(d => { if (!byDate[d.sale_date]) byDate[d.sale_date] = []; byDate[d.sale_date].push(d); });
+    const dates = Object.keys(byDate).sort().reverse();
+
+    el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Date</th><th>Store</th><th>Sales</th><th>Expense</th><th>Status</th><th></th></tr></thead>
+    <tbody>${dates.map(date => byDate[date].map(d => {
       const synced = d.sync_status === 'synced';
       let actionCol;
       if (synced) {
-        actionCol = `<span style="font-size:10px;color:var(--t4)">${d.sync_method || ''}</span>${isT1 ? ` <button class="btn btn-outline btn-sm" style="font-size:9px;color:var(--o);border-color:var(--o);margin-left:4px" onclick="Scr4.arUnlock('${d.sale_date}')">🔓 Unlock</button>` : ''}`;
+        actionCol = `<span style="font-size:9px;color:var(--t4)">${d.sync_method || ''}</span>${isT1 ? ` <button class="btn btn-outline btn-sm" style="font-size:9px;color:var(--o);border-color:var(--o);margin-left:2px" onclick="Scr4.arUnlock('${d.store_id}','${d.sale_date}')">🔓</button>` : ''}`;
       } else {
-        actionCol = `<button class="btn btn-primary btn-sm" onclick="Scr4.arSync('${d.sale_date}')">🔒 Sync</button>`;
+        actionCol = `<button class="btn btn-primary btn-sm" style="font-size:9px" onclick="Scr4.arSync('${d.store_id}','${d.sale_date}')">🔒 Sync</button>`;
       }
       return `<tr${synced ? ' style="background:var(--bg3)"' : ''}>
-        <td style="font-weight:600${synced ? ';color:var(--t3)' : ''}">${App.fmtDate(d.sale_date).substring(0, 10)}</td>
-        <td${synced ? ' style="color:var(--t3)"' : ''}>${fm(d.total_sales)}</td>
-        <td${synced ? ' style="color:var(--t3)"' : ''}>${fm(d.total_expense)}</td>
-        <td>${synced ? '<span class="sts sts-lock">🔒 Synced</span>' : '<span class="sts sts-ok">✏️ Editable</span>'}</td>
+        <td style="font-size:10px;font-weight:600;white-space:nowrap">${App.fmtDateShort(d.sale_date)}</td>
+        <td style="font-size:10px">${e(d.store_name || d.store_id)}</td>
+        <td style="font-size:10px">${fm(d.total_sales)}</td>
+        <td style="font-size:10px">${fm(d.total_expense)}</td>
+        <td>${synced ? '<span class="sts sts-lock">🔒</span>' : '<span class="sts sts-ok">✏️</span>'}</td>
         <td>${actionCol}</td>
       </tr>`;
-    }).join('')}</tbody></table></div>`;
+    }).join('')).join('')}</tbody></table></div>`;
   }
 
-  async function arSync(date) {
+  async function arSync(storeId, date) {
     App.showDialog(`<div class="popup-sheet" style="width:300px;text-align:center">
-      <div style="font-size:15px;font-weight:700;margin-bottom:8px">🔒 Sync ${date}?</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px">🔒 Sync ${e(storeId)} ${date}?</div>
       <div style="font-size:12px;color:var(--t3);margin-bottom:14px">ข้อมูลจะถูกส่งไป Finance และแก้ไขไม่ได้อีก</div>
       <div style="display:flex;gap:8px;justify-content:center">
         <button class="btn btn-outline" onclick="App.closeDialog()">ยกเลิก</button>
-        <button class="btn btn-primary" id="ar-sync-btn" onclick="Scr4.arConfirmSync('${date}')">🔒 Sync</button>
+        <button class="btn btn-primary" id="ar-sync-btn" onclick="Scr4.arConfirmSync('${storeId}','${date}')">🔒 Sync</button>
       </div>
     </div>`);
   }
 
-  async function arConfirmSync(date) {
+  async function arConfirmSync(storeId, date) {
     const btn = document.getElementById('ar-sync-btn'); if (btn) btn.disabled = true;
     try {
-      await API.syncDay(API.getStore(), date);
+      await API.syncDay(storeId, date);
       App.closeDialog();
       App.toast('Sync สำเร็จ', 'success');
-      // Update memory
-      const d = ar.days.find(x => x.sale_date === date);
+      const d = ar.days.find(x => x.store_id === storeId && x.sale_date === date);
       if (d) { d.sync_status = 'synced'; d.sync_method = 'manual'; }
       fillAccReview();
     } catch (err) { App.toast(err.message || 'Sync ไม่สำเร็จ', 'error'); }
     finally { if (btn) btn.disabled = false; }
   }
 
-  async function arUnlock(date) {
-    App.showDialog({
-      title: '🔓 Unlock วันที่ ' + App.fmtDate(date).substring(0, 10),
-      body: `<div style="font-size:12px;color:var(--t2);margin-bottom:10px">⚠️ T1 Only — ข้อมูลจะกลับเป็น Editable<br>ถ้า Finance sync ไปแล้ว unlock ไม่ได้</div>
-        <button class="btn btn-outline btn-full" id="ar-unlock-btn" style="color:var(--o);border-color:var(--o)" onclick="Scr4.arConfirmUnlock('${date}')">🔓 ยืนยัน Unlock</button>`,
-    });
+  async function arUnlock(storeId, date) {
+    App.showDialog(`<div class="popup-sheet" style="width:300px;text-align:center">
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px">🔓 Unlock ${e(storeId)} ${App.fmtDateShort(date)}?</div>
+      <div style="font-size:12px;color:var(--t2);margin-bottom:14px">⚠️ T1 Only — ข้อมูลจะกลับเป็น Editable</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="btn btn-outline" onclick="App.closeDialog()">ยกเลิก</button>
+        <button class="btn btn-outline" id="ar-unlock-btn" style="color:var(--o);border-color:var(--o)" onclick="Scr4.arConfirmUnlock('${storeId}','${date}')">🔓 Unlock</button>
+      </div>
+    </div>`);
   }
 
-  async function arConfirmUnlock(date) {
+  async function arConfirmUnlock(storeId, date) {
     const btn = document.getElementById('ar-unlock-btn'); if (btn) btn.disabled = true;
     try {
-      await API.unlockDay(API.getStore(), date);
+      await API.unlockDay(storeId, date);
       App.closeDialog();
-      App.toast('Unlock สำเร็จ — แก้ไขได้แล้ว', 'success');
-      const d = ar.days.find(x => x.sale_date === date);
+      App.toast('Unlock สำเร็จ', 'success');
+      const d = ar.days.find(x => x.store_id === storeId && x.sale_date === date);
       if (d) { d.sync_status = 'editable'; d.sync_method = null; }
       fillAccReview();
     } catch (err) { App.toast(err.message || 'Unlock ไม่ได้', 'error'); }
@@ -125,55 +155,64 @@ const Scr4 = (() => {
 
 
   // ═══════════════════════════════════════════
-  // CHANNELS
+  // CHANNELS — Matrix (master labels × stores)
   // ═══════════════════════════════════════════
-  let ch = { channels: [] };
+  let ch = { masters: [], stores: [], visibility: {} };
 
   function renderChannels() {
     return `${toolbar('Channels')}
     <div class="content" id="ch-content">
-      ${App.renderStoreSelector()}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="sl" style="margin:0" id="ch-count">📡 Channels (0)</div>
+        <div class="sl" style="margin:0" id="ch-count">📡 Channel Matrix</div>
         <button class="btn btn-primary btn-sm" onclick="Scr4.chAdd()">+ Add Channel</button>
       </div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:8px">✓ = ร้านเห็น channel นี้ · กดเพื่อ toggle</div>
       <div id="ch-table"><div class="skeleton sk-card" style="height:200px"></div></div>
     </div>`;
   }
 
   async function loadChannels() {
-    if (needStore('ch-table')) return;
     if (_busy.ch) return; _busy.ch = true;
     try {
-      const data = await API.adminGetChannels();
-      ch.channels = data.channels || [];
+      const data = await API.adminGetChannelMatrix();
+      ch.masters = data.masters || [];
+      ch.stores = data.stores || [];
+      ch.visibility = data.visibility || {};
       fillChannels();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
     finally { _busy.ch = false; }
   }
 
   function fillChannels() {
-    document.getElementById('ch-count').textContent = `📡 Channels (${ch.channels.length})`;
+    document.getElementById('ch-count').textContent = `📡 Channel Matrix (${ch.masters.length} channels × ${ch.stores.length} stores)`;
     const el = document.getElementById('ch-table');
     if (!el) return;
+    if (!ch.masters.length) { el.innerHTML = '<div class="empty-state">ยังไม่มี Channel</div>'; return; }
     const groupColors = { card_sale: 'tag-b', cash_sale: 'tag-g', delivery_sale: 'tag-o', other: 'tag-gray' };
-    el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Label</th><th>Key</th><th>Group</th><th>Finance Cat</th><th>Sort</th><th>Active</th></tr></thead>
-    <tbody>${ch.channels.map(c => `<tr>
-      <td style="font-weight:600">${e(c.channel_label)}</td>
-      <td style="font-size:10px;color:var(--t3)">${e(c.channel_key)}</td>
-      <td><span class="tag ${groupColors[c.dashboard_group] || 'tag-gray'}">${e(c.dashboard_group)}</span></td>
-      <td style="font-size:10px">${e(c.finance_sub_category)}</td>
-      <td>${c.sort_order}</td>
-      <td><div class="toggle-sw${c.is_enabled ? ' on' : ''}" onclick="Scr4.chToggle('${c.id}',${!c.is_enabled})"></div></td>
-    </tr>`).join('')}</tbody></table></div>`;
+    el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:100px">Channel</th><th>Group</th>${ch.stores.map(s => `<th style="text-align:center;font-size:10px;min-width:40px">${e(s.store_id)}</th>`).join('')}</tr></thead>
+    <tbody>${ch.masters.map(m => {
+      const vis = ch.visibility[m.channel_key] || {};
+      return `<tr>
+        <td><div style="font-size:11px;font-weight:600">${e(m.channel_label)}</div><div style="font-size:9px;color:var(--t4)">${e(m.channel_key)}</div></td>
+        <td><span class="tag ${groupColors[m.dashboard_group] || 'tag-gray'}" style="font-size:8px">${e(m.dashboard_group)}</span></td>
+        ${ch.stores.map(s => {
+          const cell = vis[s.store_id];
+          const on = cell?.is_enabled !== false;
+          const hasRow = !!cell;
+          return `<td style="text-align:center"><div class="toggle-sw${on && hasRow ? ' on' : ''}" style="margin:0 auto" onclick="Scr4.chToggle('${m.channel_key}','${s.store_id}',${!(on && hasRow)})"></div></td>`;
+        }).join('')}
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
   }
 
-  async function chToggle(id, newState) {
-    const c = ch.channels.find(x => x.id === id);
-    if (c) c.is_enabled = newState;
-    fillChannels(); // optimistic
-    try { await API.adminUpdateChannel({ channel_id: id, is_enabled: newState }); }
-    catch { if (c) c.is_enabled = !newState; fillChannels(); App.toast('อัพเดทไม่สำเร็จ', 'error'); }
+  async function chToggle(channelKey, storeId, newState) {
+    // Optimistic: update memory + re-render
+    if (!ch.visibility[channelKey]) ch.visibility[channelKey] = {};
+    const prev = ch.visibility[channelKey][storeId];
+    ch.visibility[channelKey][storeId] = { id: prev?.id || 'new', is_enabled: newState };
+    fillChannels();
+    try { await API.adminToggleChannel({ channel_key: channelKey, store_id: storeId, is_enabled: newState }); }
+    catch { ch.visibility[channelKey][storeId] = prev || undefined; fillChannels(); App.toast('อัพเดทไม่สำเร็จ', 'error'); }
   }
 
   function chAdd() {
@@ -208,60 +247,72 @@ const Scr4 = (() => {
 
 
   // ═══════════════════════════════════════════
-  // VENDORS
+  // VENDORS — Matrix (master vendor names × stores)
   // ═══════════════════════════════════════════
-  let vn = { vendors: [], search: '' };
+  let vn = { masters: [], stores: [], visibility: {}, search: '' };
 
   function renderVendors() {
     return `${toolbar('Vendors')}
     <div class="content" id="vn-content">
-      ${App.renderStoreSelector()}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="sl" style="margin:0" id="vn-count">🏪 Vendors (0)</div>
+        <div class="sl" style="margin:0" id="vn-count">🏪 Vendor Matrix</div>
         <button class="btn btn-primary btn-sm" onclick="Scr4.vnAdd()">+ Add Vendor</button>
       </div>
-      <input class="fi" style="margin-bottom:10px" placeholder="🔍 Search vendors..." oninput="Scr4.vnSearch(this.value)">
+      <input class="fi" style="margin-bottom:8px" placeholder="🔍 Search vendors..." oninput="Scr4.vnSearch(this.value)">
+      <div style="font-size:10px;color:var(--t3);margin-bottom:8px">✓ = ร้านเห็น vendor นี้ · กดเพื่อ toggle</div>
       <div id="vn-table"><div class="skeleton sk-card" style="height:200px"></div></div>
     </div>`;
   }
 
   async function loadVendors() {
-    if (needStore('vn-table')) return;
     if (_busy.vn) return; _busy.vn = true;
     try {
-      const data = await API.adminGetSuppliers();
-      vn.vendors = data.vendors || [];
+      const data = await API.adminGetVendorMatrix();
+      vn.masters = data.masters || [];
+      vn.stores = data.stores || [];
+      vn.visibility = data.visibility || {};
       fillVendors();
     } catch { App.toast('โหลดไม่สำเร็จ', 'error'); }
     finally { _busy.vn = false; }
   }
 
   function fillVendors() {
-    const list = vn.search ? vn.vendors.filter(v => (v.supplier_name || '').toLowerCase().includes(vn.search.toLowerCase())) : vn.vendors;
-    document.getElementById('vn-count').textContent = `🏪 Vendors (${list.length})`;
+    const list = vn.search ? vn.masters.filter(m => m.supplier_name.toLowerCase().includes(vn.search.toLowerCase())) : vn.masters;
+    document.getElementById('vn-count').textContent = `🏪 Vendor Matrix (${list.length} vendors × ${vn.stores.length} stores)`;
     const el = document.getElementById('vn-table');
     if (!el) return;
-    el.innerHTML = `<table class="tbl"><thead><tr><th>Name</th><th>Active</th></tr></thead>
-    <tbody>${list.map(v => `<tr>
-      <td style="font-weight:600">${e(v.supplier_name)}</td>
-      <td><div class="toggle-sw${v.is_active ? ' on' : ''}" onclick="Scr4.vnToggle('${v.id}',${!v.is_active})"></div></td>
-    </tr>`).join('')}</tbody></table>`;
+    if (!list.length) { el.innerHTML = '<div class="empty-state">ยังไม่มี Vendor</div>'; return; }
+    el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="min-width:120px">Vendor</th>${vn.stores.map(s => `<th style="text-align:center;font-size:10px;min-width:40px">${e(s.store_id)}</th>`).join('')}</tr></thead>
+    <tbody>${list.map(m => {
+      const vis = vn.visibility[m.supplier_name] || {};
+      return `<tr>
+        <td style="font-size:11px;font-weight:600">${e(m.supplier_name)}</td>
+        ${vn.stores.map(s => {
+          const cell = vis[s.store_id];
+          const on = cell?.is_active !== false;
+          const hasRow = !!cell;
+          return `<td style="text-align:center"><div class="toggle-sw${on && hasRow ? ' on' : ''}" style="margin:0 auto" onclick="Scr4.vnToggle('${e(m.supplier_name)}','${s.store_id}',${!(on && hasRow)})"></div></td>`;
+        }).join('')}
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
   }
 
   function vnSearch(val) { vn.search = val; fillVendors(); }
 
-  async function vnToggle(id, newState) {
-    const v = vn.vendors.find(x => x.id === id);
-    if (v) v.is_active = newState;
+  async function vnToggle(supplierName, storeId, newState) {
+    if (!vn.visibility[supplierName]) vn.visibility[supplierName] = {};
+    const prev = vn.visibility[supplierName][storeId];
+    vn.visibility[supplierName][storeId] = { id: prev?.id || 'new', is_active: newState };
     fillVendors();
-    try { await API.adminUpdateSupplier({ supplier_id: id, is_active: newState }); }
-    catch { if (v) v.is_active = !newState; fillVendors(); App.toast('อัพเดทไม่สำเร็จ', 'error'); }
+    try { await API.adminToggleVendor({ supplier_name: supplierName, store_id: storeId, is_active: newState }); }
+    catch { vn.visibility[supplierName][storeId] = prev || undefined; fillVendors(); App.toast('อัพเดทไม่สำเร็จ', 'error'); }
   }
 
   function vnAdd() {
     App.showDialog(`<div class="popup-sheet" style="width:320px">
       <div class="popup-header"><div class="popup-title">+ Add Vendor</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
       <div class="fg"><label class="fl">Vendor Name <span class="req">*</span></label><input class="fi" id="vn-name"></div>
+      <div class="fg"><label class="fl">เพิ่มให้ร้าน</label><select class="fi" id="vn-store"><option value="">— ทุกร้าน —</option>${vn.stores.map(s => `<option value="${s.store_id}">${e(s.store_name || s.store_id)}</option>`).join('')}</select></div>
       <button class="btn btn-gold btn-full" id="vn-save" onclick="Scr4.vnSaveNew()">💾 Save</button>
     </div>`);
   }
@@ -269,36 +320,38 @@ const Scr4 = (() => {
   async function vnSaveNew() {
     const name = document.getElementById('vn-name')?.value?.trim();
     if (!name) return App.toast('กรุณาใส่ชื่อ Vendor', 'error');
+    const storeId = document.getElementById('vn-store')?.value;
     const btn = document.getElementById('vn-save'); if (btn) btn.disabled = true;
     try {
-      const data = await API.createVendor({ store_id: API.getStore(), vendor_name: name });
-      vn.vendors.push(data);
-      // Also update App.S.vendors for S2/S3 vendor dropdown
-      App.S.vendors.push({ id: data.id, name: data.supplier_name });
+      if (storeId) {
+        await API.createVendor({ store_id: storeId, vendor_name: name });
+      } else {
+        // Create for all stores
+        for (const s of vn.stores) { await API.createVendor({ store_id: s.store_id, vendor_name: name }); }
+      }
       App.closeDialog();
-      fillVendors();
-      App.toast('สร้าง Vendor สำเร็จ', 'success');
+      App.toast(`สร้าง "${name}" สำเร็จ`, 'success');
+      loadVendors(); // reload matrix
     } catch (err) { App.toast(err.message || 'สร้างไม่สำเร็จ', 'error'); }
     finally { if (btn) btn.disabled = false; }
   }
 
 
   // ═══════════════════════════════════════════
-  // CONFIG
+  // CONFIG — Global (1 config for all stores)
   // ═══════════════════════════════════════════
   let cfg = {};
 
   function renderConfig() {
     return `${toolbar('Config')}
     <div class="content" id="cfg-content">
-      ${App.renderStoreSelector()}
-      <div class="sl" style="margin-top:0">⚙️ Store Config</div>
+      <div class="sl" style="margin-top:0">⚙️ Global Config</div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:10px">ตั้งค่ากลาง — ใช้ร่วมกันทุกร้าน</div>
       <div id="cfg-form"><div class="skeleton sk-card" style="height:200px"></div></div>
     </div>`;
   }
 
   async function loadConfig() {
-    if (needStore('cfg-form')) return;
     if (_busy.cfg) return; _busy.cfg = true;
     try {
       const data = await API.adminGetSettings();
@@ -312,12 +365,18 @@ const Scr4 = (() => {
     const el = document.getElementById('cfg-form');
     if (!el) return;
     el.innerHTML = `<div class="card">
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px">💰 Cash & Edit Window</div>
       <div class="fg"><label class="fl">Cash Tolerance ($)</label><input class="fi" type="number" step="0.01" id="cfg-tol" value="${cfg.cash_mismatch_tolerance || 2}" style="width:100px"></div>
       <div class="fg"><label class="fl">Edit Window (days)</label><input class="fi" type="number" id="cfg-days" value="${cfg.backdate_limit_days || 3}" style="width:100px"></div>
       <div class="fg"><label class="fl">Require Photos</label><div class="toggle-sw${cfg.require_photos !== false ? ' on' : ''}" id="cfg-photos" onclick="this.classList.toggle('on')"></div></div>
-      <div class="fg" style="margin:0"><label class="fl">Auto-sync after edit window</label><div class="toggle-sw${cfg.auto_sync_after_window !== false ? ' on' : ''}" id="cfg-autosync" onclick="this.classList.toggle('on')"></div></div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">Auto-sync after edit window</label><div class="toggle-sw${cfg.auto_sync_after_window !== false ? ' on' : ''}" id="cfg-autosync" onclick="this.classList.toggle('on')"></div></div>
     </div>
-    <div style="margin-top:10px"><button class="btn btn-gold" id="cfg-save" onclick="Scr4.cfgSave()">💾 Save Config</button></div>`;
+    <div class="card" style="margin-top:10px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px">🚨 Anomaly Detection</div>
+      <div class="fg"><label class="fl">Cash Variance Threshold ($)</label><input class="fi" type="number" step="0.01" id="cfg-anomaly-cash" value="${cfg.anomaly_cash_threshold || 5}" style="width:100px"></div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">Sales Drop Alert (%)</label><input class="fi" type="number" id="cfg-anomaly-drop" value="${cfg.anomaly_sales_drop_pct || 30}" style="width:100px"></div>
+    </div>
+    <div style="margin-top:12px"><button class="btn btn-gold btn-full" id="cfg-save" onclick="Scr4.cfgSave()">💾 Save Config</button></div>`;
   }
 
   async function cfgSave() {
@@ -328,6 +387,8 @@ const Scr4 = (() => {
         backdate_limit_days: parseInt(document.getElementById('cfg-days')?.value) || 3,
         require_photos: document.getElementById('cfg-photos')?.classList.contains('on'),
         auto_sync_after_window: document.getElementById('cfg-autosync')?.classList.contains('on'),
+        anomaly_cash_threshold: parseFloat(document.getElementById('cfg-anomaly-cash')?.value) || 5,
+        anomaly_sales_drop_pct: parseInt(document.getElementById('cfg-anomaly-drop')?.value) || 30,
       });
       App.toast('บันทึกสำเร็จ', 'success');
     } catch (err) { App.toast(err.message || 'บันทึกไม่สำเร็จ', 'error'); }
@@ -504,7 +565,7 @@ const Scr4 = (() => {
 
   // ═══ PUBLIC ═══
   return {
-    renderAccReview, loadAccReview, arSync, arConfirmSync, arUnlock, arConfirmUnlock,
+    renderAccReview, loadAccReview, arMonthNav, arSync, arConfirmSync, arUnlock, arConfirmUnlock,
     renderChannels, loadChannels, chToggle, chAdd, chSaveNew,
     renderVendors, loadVendors, vnSearch, vnToggle, vnAdd, vnSaveNew,
     renderConfig, loadConfig, cfgSave,

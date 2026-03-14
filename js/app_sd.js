@@ -1,5 +1,5 @@
 /**
- * Version 1.2 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.3 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -39,12 +39,12 @@ const App = (() => {
     'daily-report':   { render: () => Scr3.renderS8(),              onLoad: () => Scr3.loadS8() },
     'tasks':          { render: () => Scr3.renderTasks(),            onLoad: () => Scr3.loadTasks() },
     'daily-hub':      { render: () => Scr3.renderDH(),              onLoad: () => Scr3.loadDH() },
-    'acc-review':     { render: () => renderPlaceholder('Account Review'), onLoad: null },
-    'channels':       { render: () => renderPlaceholder('Channels'), onLoad: null },
-    'vendors':        { render: () => renderPlaceholder('Vendors'), onLoad: null },
-    'config':         { render: () => renderPlaceholder('Config'), onLoad: null },
-    'access':         { render: () => renderPlaceholder('User Access'), onLoad: null },
-    'audit':          { render: () => renderPlaceholder('Audit'), onLoad: null },
+    'acc-review':     { render: () => Scr4.renderAccReview(),       onLoad: () => Scr4.loadAccReview() },
+    'channels':       { render: () => Scr4.renderChannels(),        onLoad: () => Scr4.loadChannels() },
+    'vendors':        { render: () => Scr4.renderVendors(),         onLoad: () => Scr4.loadVendors() },
+    'config':         { render: () => Scr4.renderConfig(),          onLoad: () => Scr4.loadConfig() },
+    'access':         { render: () => Scr4.renderAccess(),          onLoad: () => Scr4.loadAccess() },
+    'audit':          { render: () => Scr4.renderAudit(),           onLoad: null },
   };
 
   // ─── NAVIGATE ───

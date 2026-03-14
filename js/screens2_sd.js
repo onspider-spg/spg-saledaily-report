@@ -1,5 +1,5 @@
 /**
- * Version 1.4 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -535,6 +535,7 @@ const Scr2 = (() => {
     s3f.extraPhotos = [];
     return `${toolbar(s3f.id ? 'Edit Invoice' : 'New Invoice')}
     <div class="content" id="s3f-content">
+      <div id="s3f-lock"></div>
       <div class="card">
         <div style="display:flex;gap:4px;margin-bottom:10px"><span class="tag tag-gray">Store: ${e(API.getStore())}</span><span class="tag tag-b">Invoice</span></div>
         <div class="fg"><label class="fl">📅 Issue Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-date" value="${td()}" onchange="Scr2.s3fDateChange()"></div>
@@ -612,6 +613,19 @@ const Scr2 = (() => {
       if (cnAmt) cnAmt.value = inv.credit_note_amount || '';
     }
     s3fCalc();
+    // NICE #8: Sync lock check for invoice_date
+    const invDate = inv.invoice_date;
+    if (invDate) {
+      try {
+        const syncData = await API.checkSync(invDate);
+        if (syncData?.is_synced) {
+          const banner = document.getElementById('s3f-lock');
+          if (banner) banner.innerHTML = lockBanner(true);
+          const btn = document.getElementById('s3f-save');
+          if (btn) btn.disabled = true;
+        }
+      } catch {}
+    }
   }
 
   function s3fDateChange() {
@@ -666,6 +680,14 @@ const Scr2 = (() => {
   }
 
   async function s3fSave() {
+    // NICE #8: Edge case — re-check sync before save
+    const issueDateVal = document.getElementById('s3f-date')?.value;
+    if (issueDateVal) {
+      try {
+        const syncChk = await API.checkSync(issueDateVal);
+        if (syncChk?.is_synced) { App.toast('วันนี้ถูก Sync แล้ว แก้ไขไม่ได้', 'error'); return; }
+      } catch {}
+    }
     if (!s3f.photoUrl) return App.toast('กรุณาถ่ายรูป Invoice', 'error');
     const issueDate = document.getElementById('s3f-date')?.value;
     const dueDate = document.getElementById('s3f-due')?.value;

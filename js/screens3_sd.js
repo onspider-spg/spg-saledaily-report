@@ -1,5 +1,5 @@
 /**
- * Version 1.5 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5.1 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -298,8 +298,8 @@ const Scr3 = (() => {
       const matched = cash.is_matched;
       const clr = matched ? 'var(--g)' : 'var(--r)';
       const bg = matched ? 'var(--gbg)' : 'var(--rbg)';
-      cashHtml = `<div class="sl">💵 Cash on Hand (auto จาก S4)</div>
-        <div class="card" style="padding:10px;border-left:3px solid ${clr}">
+      cashHtml = `<div class="card" style="padding:10px;border-left:3px solid ${clr}"><div class="sl" style="margin-top:0">💵 Cash on Hand (auto จาก S4)</div>
+        
           <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>Expected</span><span style="font-weight:600">${fm(cash.expected_cash || cash.expected || 0)}</span></div>
           <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>Actual</span><span style="font-weight:600">${fm(cash.actual_cash || cash.actual || 0)}</span></div>
           <div style="display:flex;justify-content:space-between;padding:4px 0 0;border-top:1px solid var(--bd2);margin-top:4px;font-weight:700;font-size:12px"><span>Diff</span><span style="color:${clr}">${fm(cash.difference || cash.variance || 0)}</span></div>
@@ -307,7 +307,7 @@ const Scr3 = (() => {
           ${!matched && (cash.mismatch_reason || cash.reason) ? `<div style="font-size:10px;color:var(--t3);margin-top:4px">📝 ${e(cash.mismatch_reason || cash.reason)}</div>` : ''}
         </div>`;
     } else {
-      cashHtml = `<div class="sl">💵 Cash on Hand</div><div class="card" style="padding:10px"><div style="font-size:11px;color:var(--t3)">ยังไม่ได้นับเงิน</div></div>`;
+      cashHtml = `<div class="card" style="padding:10px"><div class="sl" style="margin-top:0">💵 Cash on Hand</div><div style="font-size:11px;color:var(--t3)">ยังไม่ได้นับเงิน</div></div>`;
     }
 
     // ─── Customer time periods ───
@@ -331,16 +331,20 @@ const Scr3 = (() => {
     }
 
     el.innerHTML = `
-      <div class="sl" style="margin-top:0">💰 ยอดขาย (auto จาก S1)</div>
-      <div class="card" style="padding:10px">${chHtml}</div>
+      <div class="card" style="padding:10px">
+        <div class="sl" style="margin-top:0">💰 ยอดขาย (auto จาก S1)</div>
+        ${chHtml}
+      </div>
 
-      <div class="sl">🧾 ค่าใช้จ่าย (auto จาก S2)</div>
-      <div class="card" style="padding:10px">${expHtml}</div>
+      <div class="card" style="padding:10px">
+        <div class="sl" style="margin-top:0">🧾 ค่าใช้จ่าย (auto จาก S2)</div>
+        ${expHtml}
+      </div>
 
       ${cashHtml}
 
-      <div class="sl">🌤️ สภาพร้านวันนี้</div>
       <div class="card" style="padding:10px">
+        <div class="sl" style="margin-top:0">🌤️ สภาพร้านวันนี้</div>
         <div class="fg"><label class="fl">อากาศ</label><div class="chips" style="margin:0" id="s8-weather">
           ${[{k:'sunny',l:'☀️ แดด'},{k:'cloudy',l:'☁️ ครึ้ม'},{k:'rain',l:'🌧️ ฝน'},{k:'heavy_rain',l:'⛈️ ฝนหนัก'}].map(w => `<div class="chip${r.weather === w.k ? ' on' : ''}" onclick="Scr3.s8Pick('weather','${w.k}',this)">${w.l}</div>`).join('')}
         </div></div>
@@ -352,18 +356,18 @@ const Scr3 = (() => {
         </div></div>
       </div>
 
-      <div class="sl">🧑‍🤝‍🧑 กลุ่มลูกค้าตามช่วงเวลา</div>
       <div class="card" style="padding:10px">
+        <div class="sl" style="margin-top:0">🧑‍🤝‍🧑 กลุ่มลูกค้าตามช่วงเวลา</div>
         ${custPeriods.map(p => `<div class="fg" style="margin-bottom:6px"><label class="fl">${p.label}</label><textarea class="fi" style="padding:4px 6px;font-size:11px;min-height:28px" id="s8-cust-${p.key}" placeholder="${p.ph}">${e(r['customer_' + p.key] || '')}</textarea></div>`).join('')}
       </div>
 
-      <div class="sl">📝 Overview Note</div>
       <div class="card" style="padding:10px">
+        <div class="sl" style="margin-top:0">📝 Overview Note</div>
         <textarea class="fi" id="s8-note" rows="2" placeholder="เช่น ฝนตกหนักช่วงเย็น...">${e(r.overview_note || '')}</textarea>
       </div>
 
-      <div class="sl">🍞 Waste List</div>
       <div class="card" style="padding:10px">
+        <div class="sl" style="margin-top:0">🍞 Waste List</div>
         <div style="font-size:12px;font-weight:600;margin-bottom:8px">ขนมปัง / เค้กที่เหลือ?</div>
         <div class="chips" style="margin:0" id="s8-waste">
           <div class="chip${r.has_waste === false ? ' on' : ''}" onclick="Scr3.s8Pick('waste','no',this)">❌ No</div>

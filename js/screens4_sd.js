@@ -1,5 +1,5 @@
 /**
- * Version 1.4.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5.0 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens4_sd.js — Admin Screens
@@ -15,6 +15,19 @@ const Scr4 = (() => {
     return `<div class="toolbar"><button class="toolbar-back" onclick="App.go('dashboard')">←</button><div class="toolbar-title">${title}</div></div>`;
   }
 
+  // ─── SHARED: Brand Pills filter (used by AccReview + ReportDash) ───
+  // brands: unique values from App.S.stores[].brand
+  // selected: current brand ('' = ทั้งหมด)
+  // onSelect: string JS expression called with brand value e.g. 'Scr4.arBrandFilter'
+  function brandPills(selected, onSelect) {
+    const brands = [...new Set((App.S.stores || []).map(s => s.brand).filter(Boolean))].sort();
+    if (!brands.length) return '';
+    return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="store-pill${!selected ? ' on' : ''}" onclick="${onSelect}('')">ทั้งหมด</div>
+      ${brands.map(b => `<div class="store-pill${selected === b ? ' on' : ''}" onclick="${onSelect}('${e(b)}')">${e(b)}</div>`).join('')}
+    </div>`;
+  }
+
   // ─── Guard: force select store (not ALL) ───
   function needStore(containerId) {
     if (API.getStore() && API.getStore() !== 'ALL') return false;
@@ -26,7 +39,7 @@ const Scr4 = (() => {
   // ═══════════════════════════════════════════
   // ACC REVIEW — Month selector + All stores
   // ═══════════════════════════════════════════
-  let ar = { days: [], stores: [], kpis: {}, month: '' };
+  let ar = { days: [], stores: [], kpis: {}, month: '', brand: '' };
 
   function arMonthLabel(m) { const p = m.split('-'); const ms = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return ms[parseInt(p[1])] + ' ' + p[0]; }
 
@@ -39,6 +52,7 @@ const Scr4 = (() => {
         <span id="ar-month-label">📅 ${arMonthLabel(ar.month)}</span>
         <span class="dbar-btn" onclick="Scr4.arMonthNav(1)">›</span>
       </div>
+      <div id="ar-brand-pills">${brandPills(ar.brand, 'Scr4.arBrandFilter')}</div>
       <div class="alert alert-info" style="font-size:10px">📋 Editable = ยังแก้ไขได้ · 🔒 Synced = ส่งไป Finance แล้ว · เกิน edit window → auto-sync</div>
       <div id="ar-kpi" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
       <div id="ar-table"><div class="skeleton sk-card" style="height:200px"></div></div>
@@ -51,6 +65,13 @@ const Scr4 = (() => {
     ar.month = d.toISOString().substring(0, 7);
     document.getElementById('ar-month-label').textContent = '📅 ' + arMonthLabel(ar.month);
     loadAccReview();
+  }
+
+  function arBrandFilter(brand) {
+    ar.brand = brand;
+    const el = document.getElementById('ar-brand-pills');
+    if (el) el.innerHTML = brandPills(ar.brand, 'Scr4.arBrandFilter');
+    fillAccReview();
   }
 
   async function loadAccReview() {
@@ -68,38 +89,45 @@ const Scr4 = (() => {
   function fillAccReview() {
     const el = document.getElementById('ar-table');
     if (!el) return;
-    const k = ar.kpis;
     const isT1 = (App.S.session?.tier_level || 99) <= 1;
 
-    // KPIs
-    document.getElementById('ar-kpi').innerHTML = `
-      <div class="kpi-box"><div class="kpi-label">💰 Sales</div><div class="kpi-val" style="font-size:13px;color:var(--gold)">${App.fmtMoneyShort(k.total_sale || 0)}</div></div>
-      <div class="kpi-box"><div class="kpi-label">🧾 Expense</div><div class="kpi-val" style="font-size:13px;color:var(--r)">${App.fmtMoneyShort(k.total_expense || 0)}</div></div>
-      <div class="kpi-box"><div class="kpi-label">🔒 Synced</div><div class="kpi-val" style="font-size:13px;color:var(--g)">${k.synced || 0}</div></div>
-      <div class="kpi-box"><div class="kpi-label">✏️ Pending</div><div class="kpi-val" style="font-size:13px;color:var(--o)">${k.unsynced || 0}</div></div>`;
+    // Filter by brand (memory — 0ms)
+    const days = ar.brand
+      ? ar.days.filter(d => d.brand === ar.brand)
+      : ar.days;
 
-    if (!ar.days.length) { el.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูลเดือนนี้</div>'; return; }
+    // KPIs re-calc from filtered days
+    const totalSale = days.reduce((s, d) => s + (d.total_sales || 0), 0);
+    const totalExp  = days.reduce((s, d) => s + (d.total_expense || 0), 0);
+    const synced    = days.filter(d => d.sync_status === 'synced').length;
+    document.getElementById('ar-kpi').innerHTML = `
+      <div class="kpi-box"><div class="kpi-label">💰 Sales</div><div class="kpi-val" style="font-size:13px;color:var(--gold)">${App.fmtMoneyShort(totalSale)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">🧾 Expense</div><div class="kpi-val" style="font-size:13px;color:var(--r)">${App.fmtMoneyShort(totalExp)}</div></div>
+      <div class="kpi-box"><div class="kpi-label">🔒 Synced</div><div class="kpi-val" style="font-size:13px;color:var(--g)">${synced}</div></div>
+      <div class="kpi-box"><div class="kpi-label">✏️ Pending</div><div class="kpi-val" style="font-size:13px;color:var(--o)">${days.length - synced}</div></div>`;
+
+    if (!days.length) { el.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูลเดือนนี้</div>'; return; }
 
     // Group by date
     const byDate = {};
-    ar.days.forEach(d => { if (!byDate[d.sale_date]) byDate[d.sale_date] = []; byDate[d.sale_date].push(d); });
+    days.forEach(d => { if (!byDate[d.sale_date]) byDate[d.sale_date] = []; byDate[d.sale_date].push(d); });
     const dates = Object.keys(byDate).sort().reverse();
 
     el.innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Date</th><th>Store</th><th>Sales</th><th>Expense</th><th>Status</th><th></th></tr></thead>
     <tbody>${dates.map(date => byDate[date].map(d => {
-      const synced = d.sync_status === 'synced';
+      const isSynced = d.sync_status === 'synced';
       let actionCol;
-      if (synced) {
+      if (isSynced) {
         actionCol = `<span style="font-size:9px;color:var(--t4)">${d.sync_method || ''}</span>${isT1 ? ` <button class="btn btn-outline btn-sm" style="font-size:9px;color:var(--o);border-color:var(--o);margin-left:2px" onclick="Scr4.arUnlock('${d.store_id}','${d.sale_date}')">🔓</button>` : ''}`;
       } else {
         actionCol = `<button class="btn btn-primary btn-sm" style="font-size:9px" onclick="Scr4.arSync('${d.store_id}','${d.sale_date}')">🔒 Sync</button>`;
       }
-      return `<tr${synced ? ' style="background:var(--bg3)"' : ''}>
+      return `<tr${isSynced ? ' style="background:var(--bg3)"' : ''}>
         <td style="font-size:10px;font-weight:600;white-space:nowrap">${App.fmtDateShort(d.sale_date)}</td>
         <td style="font-size:10px">${e(d.store_name || d.store_id)}</td>
         <td style="font-size:10px">${fm(d.total_sales)}</td>
         <td style="font-size:10px">${fm(d.total_expense)}</td>
-        <td>${synced ? '<span class="sts sts-lock">🔒</span>' : '<span class="sts sts-ok">✏️</span>'}</td>
+        <td>${isSynced ? '<span class="sts sts-lock">🔒</span>' : '<span class="sts sts-ok">✏️</span>'}</td>
         <td>${actionCol}</td>
       </tr>`;
     }).join('')).join('')}</tbody></table></div>`;
@@ -556,7 +584,7 @@ const Scr4 = (() => {
   // ═══════════════════════════════════════════
   // C5: ADMIN REPORT DASHBOARD — Monthly summary (7 sections)
   // ═══════════════════════════════════════════
-  let rd = { data: null, month: '' };
+  let rd = { data: null, month: '', brand: '' };
 
   function rdMonthLabel(m) { const p = m.split('-'); const ms = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return ms[parseInt(p[1])] + ' ' + p[0]; }
 
@@ -569,6 +597,7 @@ const Scr4 = (() => {
         <span id="rd-month-label">📊 ${rdMonthLabel(rd.month)}</span>
         <span class="dbar-btn" onclick="Scr4.rdMonthNav(1)">›</span>
       </div>
+      <div id="rd-brand-pills">${brandPills(rd.brand, 'Scr4.rdBrandFilter')}</div>
       <div id="rd-kpi" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
       <div id="rd-kpi2" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
       <div id="rd-sec2" class="skeleton sk-card" style="height:100px"></div>
@@ -588,6 +617,13 @@ const Scr4 = (() => {
     loadReportDash();
   }
 
+  function rdBrandFilter(brand) {
+    rd.brand = brand;
+    const el = document.getElementById('rd-brand-pills');
+    if (el) el.innerHTML = brandPills(rd.brand, 'Scr4.rdBrandFilter');
+    fillReportDash();
+  }
+
   async function loadReportDash() {
     if (_busy.rd) return; _busy.rd = true;
     try {
@@ -599,35 +635,56 @@ const Scr4 = (() => {
 
   function fillReportDash() {
     const d = rd.data; if (!d) return;
-    const fm = App.fmtMoney, fms = App.fmtMoneyShort;
-    const k = d.kpis || {};
+    const fms = App.fmtMoneyShort;
 
-    // ── KPI Row 1: Sales / Expense / Net ──
+    // ── Brand filter: derive filtered store_ids from S.stores (memory) ──
+    const brandMap = {};
+    (App.S.stores || []).forEach(s => { brandMap[s.store_id] = s.brand || ''; });
+    const filteredSids = rd.brand
+      ? new Set((App.S.stores || []).filter(s => s.brand === rd.brand).map(s => s.store_id))
+      : null; // null = no filter (ทั้งหมด)
+
+    const filterStores = (arr) => filteredSids ? (arr || []).filter(s => filteredSids.has(s.store_id)) : (arr || []);
+
+    // ── Filtered store_comparison (used for KPI re-calc + sec4) ──
+    const stores = filterStores(d.store_comparison || []);
+
+    // ── KPI re-calc from filtered stores ──
+    const totalSales   = stores.reduce((s, x) => s + (x.total_sales || 0), 0);
+    const totalExpense = stores.reduce((s, x) => s + (x.total_expense || 0), 0);
+    const salesDates   = new Set(stores.map(s => s.store_id + '|' + s.days_recorded)); // approx
+    const daysRec      = stores.reduce((s, x) => s + (x.days_recorded || 0), 0);
+    const activeSids   = new Set(stores.map(s => s.store_id));
+
+    // ── KPI Row 1 ──
     const kpi1 = document.getElementById('rd-kpi');
     if (kpi1) {
       kpi1.className = 'kpi-row'; kpi1.style.gridTemplateColumns = '1fr 1fr 1fr';
+      const net = totalSales - totalExpense;
       kpi1.innerHTML = `
-        <div class="kpi-box"><div class="kpi-label">💰 Total Sales</div><div class="kpi-val" style="font-size:13px;color:var(--gold)">${fms(k.total_sales || 0)}</div></div>
-        <div class="kpi-box"><div class="kpi-label">🧾 Total Expense</div><div class="kpi-val" style="font-size:13px;color:var(--r)">${fms(k.total_expense || 0)}</div></div>
-        <div class="kpi-box"><div class="kpi-label">📈 Net Profit</div><div class="kpi-val" style="font-size:13px;color:${(k.net_profit || 0) >= 0 ? 'var(--g)' : 'var(--r)'}">${fms(k.net_profit || 0)}</div></div>`;
+        <div class="kpi-box"><div class="kpi-label">💰 Total Sales</div><div class="kpi-val" style="font-size:13px;color:var(--gold)">${fms(totalSales)}</div></div>
+        <div class="kpi-box"><div class="kpi-label">🧾 Total Expense</div><div class="kpi-val" style="font-size:13px;color:var(--r)">${fms(totalExpense)}</div></div>
+        <div class="kpi-box"><div class="kpi-label">📈 Net Profit</div><div class="kpi-val" style="font-size:13px;color:${net >= 0 ? 'var(--g)' : 'var(--r)'}">${fms(net)}</div></div>`;
     }
 
-    // ── KPI Row 2: Days / Stores / Avg ──
+    // ── KPI Row 2 ──
     const kpi2 = document.getElementById('rd-kpi2');
     if (kpi2) {
       kpi2.className = 'kpi-row'; kpi2.style.gridTemplateColumns = '1fr 1fr 1fr';
+      const avgPerDay = activeSids.size > 0 && daysRec > 0 ? Math.round(totalSales / daysRec) : 0;
       kpi2.innerHTML = `
-        <div class="kpi-box"><div class="kpi-label">📅 Days Recorded</div><div class="kpi-val" style="font-size:14px">${k.days_recorded || 0}</div></div>
-        <div class="kpi-box"><div class="kpi-label">🏪 Active Stores</div><div class="kpi-val" style="font-size:14px">${k.stores_active || 0}</div></div>
-        <div class="kpi-box"><div class="kpi-label">📊 Avg/Day</div><div class="kpi-val" style="font-size:13px">${fms(k.avg_sales_per_day || 0)}</div></div>`;
+        <div class="kpi-box"><div class="kpi-label">📅 Days Recorded</div><div class="kpi-val" style="font-size:14px">${daysRec}</div></div>
+        <div class="kpi-box"><div class="kpi-label">🏪 Active Stores</div><div class="kpi-val" style="font-size:14px">${activeSids.size}</div></div>
+        <div class="kpi-box"><div class="kpi-label">📊 Avg/Day</div><div class="kpi-val" style="font-size:13px">${fms(avgPerDay)}</div></div>`;
     }
 
-    // ── Sec 2: Incident Breakdown ──
+    // ── Sec 2: Incidents (filter by store_id if brand selected) ──
     const sec2 = document.getElementById('rd-sec2');
     if (sec2) {
       const inc = d.incidents || {};
-      const cats = inc.by_category || [];
-      if (cats.length) {
+      // When brand filtered, incidents data from backend is already aggregated — use as-is if no filter, else note limitation
+      const cats = filteredSids ? [] : (inc.by_category || []); // incidents not per-store in backend data — hide when filtered
+      if (!filteredSids && cats.length) {
         const maxC = Math.max(...cats.map(c => c.count), 1);
         sec2.className = 'card'; sec2.style.height = 'auto';
         sec2.innerHTML = `<div class="sl" style="margin-top:0">🔍 Incidents (${inc.total_count || 0} total · ${inc.stores_with_incidents || 0} stores)</div>
@@ -637,13 +694,15 @@ const Scr4 = (() => {
             <div style="flex:1;background:var(--bg3);border-radius:3px;height:14px;overflow:hidden"><div style="width:${Math.round(c.count / maxC * 100)}%;height:100%;background:var(--r);border-radius:3px;opacity:.7"></div></div>
             <span style="font-weight:600;min-width:24px;text-align:right">${c.count}</span>
           </div>`).join('')}`;
+      } else if (filteredSids) {
+        sec2.innerHTML = ''; sec2.className = ''; sec2.style.height = '0';
       } else { sec2.innerHTML = ''; sec2.className = ''; sec2.style.height = '0'; }
     }
 
-    // ── Sec 3: Incident Trend ──
+    // ── Sec 3: Incident Trend (hide when brand filtered — not per-store) ──
     const sec3 = document.getElementById('rd-sec3');
     if (sec3) {
-      const trend = d.incident_trend || [];
+      const trend = filteredSids ? [] : (d.incident_trend || []);
       if (trend.length) {
         sec3.className = 'card'; sec3.style.height = 'auto';
         sec3.innerHTML = `<div class="sl" style="margin-top:0">📈 Incident Trend</div>
@@ -658,10 +717,9 @@ const Scr4 = (() => {
       } else { sec3.innerHTML = ''; sec3.className = ''; sec3.style.height = '0'; }
     }
 
-    // ── Sec 4: Store Comparison ──
+    // ── Sec 4: Store Comparison (filtered) ──
     const sec4 = document.getElementById('rd-sec4');
     if (sec4) {
-      const stores = d.store_comparison || [];
       if (stores.length) {
         sec4.className = 'card'; sec4.style.height = 'auto';
         sec4.innerHTML = `<div class="sl" style="margin-top:0">🏪 Store Comparison</div>
@@ -676,11 +734,11 @@ const Scr4 = (() => {
       } else { sec4.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>'; sec4.className = ''; sec4.style.height = 'auto'; }
     }
 
-    // ── Sec 5: Leftovers ──
+    // ── Sec 5: Leftovers (not per-store in backend — hide when filtered) ──
     const sec5 = document.getElementById('rd-sec5');
     if (sec5) {
       const left = d.leftovers || {};
-      const items = left.top_items || [];
+      const items = filteredSids ? [] : (left.top_items || []);
       if (items.length) {
         sec5.className = 'card'; sec5.style.height = 'auto';
         sec5.innerHTML = `<div class="sl" style="margin-top:0">🍰 Top Leftovers (${left.total_entries || 0} items)</div>
@@ -693,10 +751,10 @@ const Scr4 = (() => {
       } else { sec5.innerHTML = ''; sec5.className = ''; sec5.style.height = '0'; }
     }
 
-    // ── Sec 6: Weather × Sales ──
+    // ── Sec 6: Weather (not per-store in backend — hide when filtered) ──
     const sec6 = document.getElementById('rd-sec6');
     if (sec6) {
-      const wList = d.weather || [];
+      const wList = filteredSids ? [] : (d.weather || []);
       if (wList.length && !(wList.length === 1 && wList[0].weather_type === 'unknown')) {
         sec6.className = 'card'; sec6.style.height = 'auto';
         const wIcons = { 'sunny': '☀️', 'cloudy': '☁️', 'rainy': '🌧️', 'stormy': '⛈️', 'hot': '🔥', 'cool': '❄️' };
@@ -710,10 +768,10 @@ const Scr4 = (() => {
       } else { sec6.innerHTML = ''; sec6.className = ''; sec6.style.height = '0'; }
     }
 
-    // ── Sec 7: Tasks ──
+    // ── Sec 7: Tasks (not per-store in backend — hide when filtered) ──
     const sec7 = document.getElementById('rd-sec7');
     if (sec7) {
-      const tk = d.tasks || {};
+      const tk = filteredSids ? {} : (d.tasks || {});
       if (tk.total > 0) {
         const pct = tk.completion_rate || 0;
         sec7.className = 'card'; sec7.style.height = 'auto';
@@ -735,8 +793,8 @@ const Scr4 = (() => {
 
   // ═══ PUBLIC ═══
   return {
-    renderAccReview, loadAccReview, arMonthNav, arSync, arConfirmSync, arUnlock, arConfirmUnlock,
-    renderReportDash, loadReportDash, rdMonthNav,
+    renderAccReview, loadAccReview, arMonthNav, arBrandFilter, arSync, arConfirmSync, arUnlock, arConfirmUnlock,
+    renderReportDash, loadReportDash, rdMonthNav, rdBrandFilter,
     renderChannels, loadChannels, chToggle, chAdd, chSaveNew,
     renderVendors, loadVendors, vnSearch, vnToggle, vnAdd, vnSaveNew,
     renderConfig, loadConfig, cfgSave,

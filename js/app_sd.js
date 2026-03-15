@@ -1,5 +1,5 @@
 /**
- * Version 1.8.4 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.8.5 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -11,7 +11,7 @@ const App = (() => {
   // ═══ STATE (memory-only except token/session in localStorage) ═══
   const S = {
     session: null, stores: [],
-    channels: [], vendors: [], settings: {},
+    channels: [], allChannels: [], vendors: [], settings: {},
     permissions: {},
     dashboard: null,
     _bundleLoaded: false, _bundleLoading: false,
@@ -347,18 +347,10 @@ const App = (() => {
       `<div class="store-pill${s.store_id === sel ? ' on' : ''}" onclick="App.selectStore('${s.store_id}')">${esc(s.short || s.store_id)}</div>`
     ).join('')}</div>`;
   }
-  async function selectStore(id) {
-    API.setStore(id); S.dashboard = null; S.channels = [];
-    go(currentRoute, currentParams); // render skeleton ทันที
-    if (_onLoadTimer) { clearTimeout(_onLoadTimer); _onLoadTimer = null; } // cancel auto-onLoad
-    if (id && id !== 'ALL') {
-      try {
-        const chRes = await API.adminGetChannels(id);
-        S.channels = (chRes.channels || []).filter(c => c.is_enabled);
-      } catch {}
-    }
-    const def = ROUTES[currentRoute];
-    if (def?.onLoad) def.onLoad(currentParams);
+  function selectStore(id) {
+    API.setStore(id); S.dashboard = null;
+    S.channels = (id && id !== 'ALL') ? S.allChannels.filter(c => c.store_id === id) : [];
+    go(currentRoute, currentParams);
   }
 
   // ═══ INIT ═══
@@ -374,16 +366,21 @@ const App = (() => {
       API.saveSession({ token: token || session.token, ...data });
       S.session = API.getSession();
       S.stores = data.all_stores || [];
-      S.channels = data.channels || [];
+      S.allChannels = data.all_channels || [];
       S.vendors = data.vendors || [];
       S.settings = data.settings || {};
       S.permissions = data.permissions || {};
       S.dashboard = data._dashboard || null;
       S._bundleLoaded = true;
 
-      // Default store
-      if (!API.isHQ()) API.setStore(S.session.store_id);
-      else API.setStore('ALL');
+      // Default store + derive channels from memory
+      if (!API.isHQ()) {
+        API.setStore(S.session.store_id);
+        S.channels = S.allChannels.filter(c => c.store_id === S.session.store_id);
+      } else {
+        API.setStore('ALL');
+        S.channels = [];
+      }
 
       // Navigate to saved hash or dashboard (skip loading/no-access)
       const skip = ['loading', 'no-access'];

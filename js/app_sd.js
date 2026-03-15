@@ -1,5 +1,5 @@
 /**
- * Version 1.8.3 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.8.4 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -348,14 +348,17 @@ const App = (() => {
     ).join('')}</div>`;
   }
   async function selectStore(id) {
-    API.setStore(id); S.dashboard = null;
+    API.setStore(id); S.dashboard = null; S.channels = [];
+    go(currentRoute, currentParams); // render skeleton ทันที
+    if (_onLoadTimer) { clearTimeout(_onLoadTimer); _onLoadTimer = null; } // cancel auto-onLoad
     if (id && id !== 'ALL') {
       try {
         const chRes = await API.adminGetChannels(id);
         S.channels = (chRes.channels || []).filter(c => c.is_enabled);
       } catch {}
-    } else { S.channels = []; }
-    go(currentRoute, currentParams);
+    }
+    const def = ROUTES[currentRoute];
+    if (def?.onLoad) def.onLoad(currentParams);
   }
 
   // ═══ INIT ═══

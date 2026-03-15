@@ -1,5 +1,5 @@
 /**
- * Version 1.3.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.3.2 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * api_sd.js — API Client + Token + Session
@@ -68,29 +68,11 @@ const API = (() => {
     } finally { clearTimeout(timer); }
   }
 
-  // ─── Image Compression ───
-  function compressImage(file, maxPx = 1200, quality = 0.75) {
-    if (!file.type.startsWith('image/') || file.size < 500 * 1024) return Promise.resolve(file);
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > maxPx || h > maxPx) { if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; } else { w = Math.round(w * maxPx / h); h = maxPx; } }
-        const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
-        cvs.getContext('2d').drawImage(img, 0, 0, w, h);
-        cvs.toBlob(blob => resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file), 'image/jpeg', quality);
-      };
-      img.onerror = () => resolve(file);
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
-  // ─── Photo Upload ───
+  // ─── Photo Upload (compress handled server-side) ───
   async function uploadPhoto(file, category = 'sale', store_id) {
-    const compressed = await compressImage(file);
     const fd = new FormData();
     fd.append('token', getToken());
-    fd.append('file', compressed);
+    fd.append('file', file);
     fd.append('category', category);
     if (store_id) fd.append('store_id', store_id);
     const resp = await fetch(`${BASE}?action=sd_upload_photo`, { method: 'POST', body: fd });
@@ -108,7 +90,7 @@ const API = (() => {
   return {
     HOME_URL, LOGOUT_URL,
     initToken, getToken, saveSession, getSession, clearSession,
-    hasPermission, isHQ, tokenBody, post, uploadPhoto, compressImage,
+    hasPermission, isHQ, tokenBody, post, uploadPhoto,
     setStore, getStore,
 
     // Global

@@ -1,5 +1,5 @@
 /**
- * Version 1.5.2 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5.4 | 15 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -127,7 +127,7 @@ const Scr2 = (() => {
       </div>
       <div id="s1-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
       <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s1PickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
-      <input type="file" id="s1-file" accept="image/*,.pdf" style="display:none" onchange="Scr2.s1HandlePhoto(event)">
+      <input type="file" id="s1-file" accept="" style="display:none" onchange="Scr2.s1HandlePhoto(event)">
       <div style="margin-top:12px"><button class="btn btn-gold btn-full" style="padding:10px" id="s1-save" onclick="Scr2.s1Save()">💾 Save</button></div>
     </div>`;
   }
@@ -210,7 +210,7 @@ const Scr2 = (() => {
     if (!file) return;
     try {
       App.toast('กำลังอัพโหลด...', 'info');
-      const data = await API.uploadPhoto(file, 'sale');
+      const data = await API.uploadPhoto(file, 'sale', API.getStore());
       if (s1._target === 'card') {
         s1.photoCard = data.url;
         const el = document.getElementById('s1-photo-card');
@@ -357,7 +357,7 @@ const Scr2 = (() => {
       </div>
       <div id="s2f-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${renderExtraPhotos(s2.extraPhotos, 's2')}</div>
       <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s2PickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
-      <input type="file" id="s2f-file" accept="image/*,.pdf" style="display:none" onchange="Scr2.s2HandlePhoto(event)">
+      <input type="file" id="s2f-file" accept="" style="display:none" onchange="Scr2.s2HandlePhoto(event)">
       <input type="hidden" id="s2f-photo-url" value="${ex?.photo_url || ''}">
       <input type="hidden" id="s2f-id" value="${editId || ''}">
       <input type="hidden" id="s2f-pm-val" value="${ex?.payment_method || 'cash'}">
@@ -389,7 +389,7 @@ const Scr2 = (() => {
     const file = event.target.files?.[0]; if (!file) return;
     try {
       App.toast('กำลังอัพโหลด...', 'info');
-      const data = await API.uploadPhoto(file, 'expense');
+      const data = await API.uploadPhoto(file, 'expense', API.getStore());
       if (_s2PhotoTarget === 'extra') {
         s2.extraPhotos.push(data.url);
         const epEl = document.getElementById('s2f-extra-photos');
@@ -569,7 +569,7 @@ const Scr2 = (() => {
           <div class="pbox" id="s3f-photo-box" onclick="Scr2.s3fPickPhoto('main')"><div>📸</div><div style="font-size:8px">* บังคับ</div></div>
           <div id="s3f-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
           <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s3fPickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
-          <input type="file" id="s3f-file" accept="image/*,.pdf" style="display:none" onchange="Scr2.s3fHandlePhoto(event)">
+          <input type="file" id="s3f-file" accept="" style="display:none" onchange="Scr2.s3fHandlePhoto(event)">
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
@@ -658,7 +658,7 @@ const Scr2 = (() => {
     const file = event.target.files?.[0]; if (!file) return;
     try {
       App.toast('กำลังอัพโหลด...', 'info');
-      const data = await API.uploadPhoto(file, 'invoice');
+      const data = await API.uploadPhoto(file, 'invoice', API.getStore());
       if (_s3fPhotoTarget === 'extra') {
         s3f.extraPhotos.push(data.url);
         const epEl = document.getElementById('s3f-extra-photos');
@@ -749,7 +749,7 @@ const Scr2 = (() => {
       <div class="pbox" style="width:100%;height:50px;flex-direction:row;gap:8px" id="s4-photo-box" onclick="document.getElementById('s4-file').click()">
         <div>💵</div><div>ถ่ายรูปเงินสดก่อนส่ง</div><div style="color:var(--r)">*</div>
       </div>
-      <input type="file" id="s4-file" accept="image/*" style="display:none" onchange="Scr2.s4HandlePhoto(event)">
+      <input type="file" id="s4-file" accept="" style="display:none" onchange="Scr2.s4HandlePhoto(event)">
       <input type="hidden" id="s4-photo-url">
       <div class="sl">🤝 Handover</div>
       <div id="s4-handover"><div class="empty-state">ยังไม่มีข้อมูล</div></div>
@@ -842,7 +842,7 @@ const Scr2 = (() => {
     const file = event.target.files?.[0]; if (!file) return;
     try {
       App.toast('กำลังอัพโหลด...', 'info');
-      const data = await API.uploadPhoto(file, 'cash');
+      const data = await API.uploadPhoto(file, 'cash', API.getStore());
       document.getElementById('s4-photo-url').value = data.url;
       const box = document.getElementById('s4-photo-box');
       if (box) box.innerHTML = `<img src="${data.url}" style="height:48px;border-radius:6px"> <span>เปลี่ยนรูป</span>`;

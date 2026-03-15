@@ -1,5 +1,5 @@
 /**
- * Version 1.5.4 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5.5 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -109,25 +109,29 @@ const Scr2 = (() => {
       ${dateBar('s1', s1.date, 'Scr2.s1Nav')}
       <div id="s1-lock"></div>
       <div class="sl">ช่องทางขาย</div>
-      <div id="s1-channels"><div class="skeleton sk-card" style="height:200px"></div></div>
-      <div class="total-bar" style="background:var(--gold-bg);border:1.5px solid var(--gold);color:var(--gold)">
-        <span>ยอดรวมทั้งหมด</span><span style="font-size:18px" id="s1-total">$0.00</span>
-      </div>
-      <details style="margin-bottom:8px;border:1px solid var(--bd2);border-radius:var(--rd);padding:8px 10px">
-        <summary style="font-size:12px;font-weight:600;cursor:pointer">▸ Cancel / ผลต่าง (ถ้ามี)</summary>
-        <div style="padding-top:8px">
-          <div class="fg"><label class="fl">💰 ยอด Cancel</label><input class="fi" id="s1-cancel-amt" placeholder="0.00" type="number" step="0.01"></div>
-          <div class="fg"><label class="fl">📝 เหตุผล</label><input class="fi" id="s1-cancel-reason" placeholder="เช่น ลูกค้าจ่ายไม่ตรง"></div>
+      <div class="card" style="padding:10px">
+        <div id="s1-channels"><div class="skeleton sk-card" style="height:200px"></div></div>
+        <div class="total-bar" style="background:var(--gold-bg);border:1.5px solid var(--gold);color:var(--gold)">
+          <span>ยอดรวมทั้งหมด</span><span style="font-size:18px" id="s1-total">$0.00</span>
         </div>
-      </details>
-      <div class="sl">📸 Photo (mandatory)</div>
-      <div style="display:flex;gap:8px">
-        <div class="pbox" id="s1-photo-card" onclick="Scr2.s1PickPhoto('card')"><div>📸</div><div>Card Summary</div><div style="color:var(--r)">*</div></div>
-        <div class="pbox" id="s1-photo-cash" onclick="Scr2.s1PickPhoto('cash')" style="display:none"><div>📸</div><div>Cash</div></div>
+        <details style="margin-top:8px;border:1px solid var(--bd2);border-radius:var(--rd);padding:8px 10px">
+          <summary style="font-size:12px;font-weight:600;cursor:pointer">▸ Cancel / ผลต่าง (ถ้ามี)</summary>
+          <div style="padding-top:8px">
+            <div class="fg"><label class="fl">💰 ยอด Cancel</label><input class="fi" id="s1-cancel-amt" placeholder="0.00" type="number" step="0.01"></div>
+            <div class="fg"><label class="fl">📝 เหตุผล</label><input class="fi" id="s1-cancel-reason" placeholder="เช่น ลูกค้าจ่ายไม่ตรง"></div>
+          </div>
+        </details>
       </div>
-      <div id="s1-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
-      <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s1PickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
-      <input type="file" id="s1-file" accept="" style="display:none" onchange="Scr2.s1HandlePhoto(event)">
+      <div class="sl">📸 Photo (mandatory)</div>
+      <div class="card" style="padding:10px">
+        <div style="display:flex;gap:8px">
+          <div class="pbox" id="s1-photo-card" onclick="Scr2.s1PickPhoto('card')"><div>📸</div><div>Card Summary</div><div style="color:var(--r)">*</div></div>
+          <div class="pbox" id="s1-photo-cash" onclick="Scr2.s1PickPhoto('cash')" style="display:none"><div>📸</div><div>Cash</div></div>
+        </div>
+        <div id="s1-extra-photos" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+        <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s1PickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
+        <input type="file" id="s1-file" accept="" style="display:none" onchange="Scr2.s1HandlePhoto(event)">
+      </div>
       <div style="margin-top:12px"><button class="btn btn-gold btn-full" style="padding:10px" id="s1-save" onclick="Scr2.s1Save()">💾 Save</button></div>
     </div>`;
   }
@@ -742,15 +746,19 @@ const Scr2 = (() => {
       </div>
       <div id="s4-result"></div>
       <div id="s4-mismatch" style="display:none">
-        <div class="fg"><label class="fl">เหตุผลเงินไม่ตรง <span class="req">*</span></label>
-          <input class="fi" id="s4-reason" placeholder="อธิบายเหตุผล"></div>
+        <div class="card" style="padding:10px">
+          <div class="fg" style="margin:0"><label class="fl">เหตุผลเงินไม่ตรง <span class="req">*</span></label>
+            <input class="fi" id="s4-reason" placeholder="อธิบายเหตุผล"></div>
+        </div>
       </div>
       <div class="sl">📸 ถ่ายรูปเงินสด (บังคับ)</div>
-      <div class="pbox" style="width:100%;height:50px;flex-direction:row;gap:8px" id="s4-photo-box" onclick="document.getElementById('s4-file').click()">
-        <div>💵</div><div>ถ่ายรูปเงินสดก่อนส่ง</div><div style="color:var(--r)">*</div>
+      <div class="card" style="padding:10px">
+        <div class="pbox" style="width:100%;height:50px;flex-direction:row;gap:8px" id="s4-photo-box" onclick="document.getElementById('s4-file').click()">
+          <div>💵</div><div>ถ่ายรูปเงินสดก่อนส่ง</div><div style="color:var(--r)">*</div>
+        </div>
+        <input type="file" id="s4-file" accept="" style="display:none" onchange="Scr2.s4HandlePhoto(event)">
+        <input type="hidden" id="s4-photo-url">
       </div>
-      <input type="file" id="s4-file" accept="" style="display:none" onchange="Scr2.s4HandlePhoto(event)">
-      <input type="hidden" id="s4-photo-url">
       <div class="sl">🤝 Handover</div>
       <div id="s4-handover"><div class="empty-state">ยังไม่มีข้อมูล</div></div>
       <div style="margin-top:12px"><button class="btn btn-gold btn-full" style="padding:10px" id="s4-submit" onclick="Scr2.s4Submit()">💾 Submit</button></div>

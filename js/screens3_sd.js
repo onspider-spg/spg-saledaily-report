@@ -1,5 +1,5 @@
 /**
- * Version 1.5.1 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.5.2 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -208,13 +208,13 @@ const Scr3 = (() => {
         <span id="s8-date-label">📅 ${App.fmtDate(s8.date)}</span>
         <span class="dbar-btn" onclick="Scr3.s8Nav(1)">›</span>
       </div>
-      <div class="tab-row">
+      <div id="s8-tab-content"><div class="skeleton sk-card" style="height:200px"></div></div>
+      <div class="tab-row" style="margin-top:12px">
         <div class="tab-pill on" data-tab="overview" onclick="Scr3.s8SetTab('overview',this)">📊 ภาพรวม</div>
         <div class="tab-pill" data-tab="incidents" onclick="Scr3.s8SetTab('incidents',this)">⚠️ เหตุการณ์</div>
         <div class="tab-pill" data-tab="tasks" onclick="Scr3.s8SetTab('tasks',this)">📋 ติดตาม</div>
       </div>
-      <div id="s8-tab-content"><div class="skeleton sk-card" style="height:200px"></div></div>
-      <div style="display:flex;gap:8px;margin-top:12px;padding-bottom:8px">
+      <div style="display:flex;gap:8px;margin-top:8px;padding-bottom:8px">
         <button class="btn btn-gold" style="flex:1;padding:10px" id="s8-save" onclick="Scr3.s8Save()">💾 บันทึก</button>
         <button class="btn btn-outline" style="flex:1" onclick="Scr3.s8Copy()">📋 Copy</button>
         <button class="btn btn-outline" style="flex:0 0 44px;display:none" id="s8-share-btn" onclick="Scr3.s8Share()">📤</button>
@@ -352,7 +352,7 @@ const Scr3 = (() => {
           ${[{k:'above',l:'📈 ดีกว่าปกติ'},{k:'normal',l:'➡️ ปกติ'},{k:'below',l:'📉 ต่ำกว่าปกติ'}].map(t => `<div class="chip${r.traffic === t.k ? ' on' : ''}" onclick="Scr3.s8Pick('traffic','${t.k}',this)">${t.l}</div>`).join('')}
         </div></div>
         <div class="fg"><label class="fl">ระบบ POS / Printer</label><div class="chips" style="margin:0" id="s8-pos">
-          ${[{k:'ok',l:'✅ ปกติ'},{k:'issue',l:'⚠️ มีปัญหา'}].map(p => `<div class="chip${(r.pos_status || 'ok') === p.k ? ' on' : ''}" onclick="Scr3.s8Pick('pos_status','${p.k}',this)">${p.l}</div>`).join('')}
+          ${[{k:'ok',l:'✅ ปกติ'},{k:'issue',l:'⚠️ มีปัญหา'}].map(p => `<div class="chip${r.pos_status === p.k ? ' on' : ''}" onclick="Scr3.s8Pick('pos_status','${p.k}',this)">${p.l}</div>`).join('')}
         </div></div>
       </div>
 

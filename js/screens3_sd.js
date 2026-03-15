@@ -1,5 +1,5 @@
 /**
- * Version 1.5.2 | 16 MAR 2026 | Siam Palette Group
+ * Version 1.6 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -208,11 +208,16 @@ const Scr3 = (() => {
         <span id="s8-date-label">📅 ${App.fmtDate(s8.date)}</span>
         <span class="dbar-btn" onclick="Scr3.s8Nav(1)">›</span>
       </div>
-      <div id="s8-tab-content"><div class="skeleton sk-card" style="height:200px"></div></div>
-      <div class="tab-row" style="margin-top:12px">
+      <div class="tab-row" id="s8-tabs-top">
         <div class="tab-pill on" data-tab="overview" onclick="Scr3.s8SetTab('overview',this)">📊 ภาพรวม</div>
         <div class="tab-pill" data-tab="incidents" onclick="Scr3.s8SetTab('incidents',this)">⚠️ เหตุการณ์</div>
         <div class="tab-pill" data-tab="tasks" onclick="Scr3.s8SetTab('tasks',this)">📋 ติดตาม</div>
+      </div>
+      <div id="s8-tab-content"><div class="skeleton sk-card" style="height:200px"></div></div>
+      <div class="tab-row-sm" id="s8-tabs-bottom">
+        <div class="tab-sm on" data-tab="overview" onclick="Scr3.s8SetTab('overview',this)">📊 ภาพรวม</div>
+        <div class="tab-sm" data-tab="incidents" onclick="Scr3.s8SetTab('incidents',this)">⚠️ เหตุการณ์</div>
+        <div class="tab-sm" data-tab="tasks" onclick="Scr3.s8SetTab('tasks',this)">📋 ติดตาม</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px;padding-bottom:8px">
         <button class="btn btn-gold" style="flex:1;padding:10px" id="s8-save" onclick="Scr3.s8Save()">💾 บันทึก</button>
@@ -262,7 +267,12 @@ const Scr3 = (() => {
 
   function s8SetTab(tab, el) {
     s8.tab = tab;
-    if (el) { el.parentElement.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('on')); el.classList.add('on'); }
+    // Sync both tab bars
+    ['s8-tabs-top', 's8-tabs-bottom'].forEach(id => {
+      const row = document.getElementById(id);
+      if (!row) return;
+      row.querySelectorAll('[data-tab]').forEach(t => { t.classList.toggle('on', t.dataset.tab === tab); });
+    });
     fillS8Tab();
   }
 
@@ -415,7 +425,7 @@ const Scr3 = (() => {
 
     el.innerHTML = `<div class="sl" style="margin-top:0">⚠️ เหตุการณ์ — กดจำนวน + ใส่ note</div>
       ${catHtml}
-      <div style="margin-top:10px;padding:10px;background:var(--bg3);border-radius:var(--rd);margin-bottom:12px">
+      <div class="card" style="padding:10px;margin-bottom:12px">
         <div style="font-size:11px;font-weight:600;margin-bottom:4px">📊 สรุปเหตุการณ์วันนี้</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px" id="s8-inc-summary">${badges || '<span style="font-size:10px;color:var(--t3)">ไม่มีเหตุการณ์</span>'}</div>
         <div style="font-size:10px;color:var(--t3);margin-top:4px">รวม <b id="s8-inc-total">${totalCount}</b> เหตุการณ์</div>
@@ -504,7 +514,7 @@ const Scr3 = (() => {
             <button class="cnt-btn" style="color:var(--g);border-color:var(--g);font-size:14px;width:28px;height:28px" onclick="Scr3.s8ToggleTask('${t.id}','done')">✓</button>
           </div>
         </div>`;
-      }).join('') : '<div style="text-align:center;padding:16px;color:var(--t3);font-size:11px">ไม่มีงานค้าง</div>'}</div>`;
+      }).join('') : '<div class="card" style="text-align:center;padding:16px;color:var(--t3);font-size:11px">ไม่มีงานค้าง</div>'}</div>`;
   }
 
   function taskCard(t, canComplete, toggleFn) {
@@ -968,29 +978,64 @@ const Scr3 = (() => {
   function tkNewTask() {
     App.showDialog(`<div class="popup-sheet" style="width:360px">
       <div class="popup-header"><div class="popup-title">+ New Task</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
-      <div class="fg"><label class="fl">Title <span class="req">*</span></label><input class="fi" id="tknew-title"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="fg"><label class="fl">Type</label><select class="fi" id="tknew-type"><option value="follow_up">📋 Follow-up</option><option value="equipment">🔧 Equipment</option><option value="suggestion">💡 Suggestion</option><option value="action">🚨 Action</option></select></div>
+      <div class="fg"><label class="fl">Type</label><select class="fi" id="tknew-type" onchange="Scr3.tkTypeChange()">
+        <option value="follow_up">📋 Follow-up</option><option value="equipment">🔧 Equipment</option><option value="suggestion">💡 Suggestion</option><option value="action">🚨 Action</option>
+      </select></div>
+      <div id="tknew-fields-default">
+        <div class="fg"><label class="fl">Title <span class="req">*</span></label><input class="fi" id="tknew-title"></div>
         <div class="fg"><label class="fl">Priority</label><select class="fi" id="tknew-pri"><option value="normal">Normal</option><option value="urgent">Urgent</option><option value="critical">Critical</option></select></div>
+        <div class="fg"><label class="fl">Due Date</label><input class="fi" type="date" id="tknew-due"></div>
+        <div class="fg"><label class="fl">Note</label><textarea class="fi" id="tknew-note" rows="2"></textarea></div>
       </div>
-      <div class="fg"><label class="fl">Due Date</label><input class="fi" type="date" id="tknew-due"></div>
-      <div class="fg"><label class="fl">Note</label><textarea class="fi" id="tknew-note" rows="2"></textarea></div>
+      <div id="tknew-fields-equip" style="display:none">
+        <div class="fg"><label class="fl">ชื่ออุปกรณ์ / เครื่อง <span class="req">*</span></label><input class="fi" id="tknew-eq-name" placeholder="เช่น เครื่องทำน้ำแข็ง, เตาอบ..."></div>
+        <div class="fg"><label class="fl">อาการ <span class="req">*</span></label><input class="fi" id="tknew-eq-symptom" placeholder="เช่น ไม่ทำความเย็น, มีเสียงดัง..."></div>
+        <div class="fg"><label class="fl">ความเร่งด่วน</label><select class="fi" id="tknew-eq-urgency">
+          <option value="">— เลือก —</option>
+          <option value="critical">🔴 ใช้งานไม่ได้ ต้องซ่อมทันที</option>
+          <option value="high">🟠 ควรซ่อมเร็ว</option>
+          <option value="low">🟡 ไม่รีบ ซ่อมเมื่อมีเวลา</option>
+          <option value="dispose">⚫ ไม่ซ่อม — ทิ้ง</option>
+        </select></div>
+      </div>
       <button class="btn btn-gold btn-full" id="tknew-save" onclick="Scr3.tkSaveNew()">💾 Save</button>
     </div>`);
   }
 
+  function tkTypeChange() {
+    const type = document.getElementById('tknew-type')?.value;
+    const defaultFields = document.getElementById('tknew-fields-default');
+    const equipFields = document.getElementById('tknew-fields-equip');
+    if (defaultFields) defaultFields.style.display = type === 'equipment' ? 'none' : '';
+    if (equipFields) equipFields.style.display = type === 'equipment' ? '' : 'none';
+  }
+
   async function tkSaveNew() {
-    const title = document.getElementById('tknew-title')?.value?.trim();
-    if (!title) return App.toast('กรุณาใส่ Title', 'error');
+    const type = document.getElementById('tknew-type')?.value || 'follow_up';
     const btn = document.getElementById('tknew-save'); if (btn) btn.disabled = true;
     try {
-      const data = await API.createTask({
-        store_id: API.getStore(), title,
-        type: document.getElementById('tknew-type')?.value || 'follow_up',
-        priority: document.getElementById('tknew-pri')?.value || 'normal',
-        due_date: document.getElementById('tknew-due')?.value || null,
-        note: document.getElementById('tknew-note')?.value || null,
-      });
+      let payload;
+      if (type === 'equipment') {
+        const name = document.getElementById('tknew-eq-name')?.value?.trim();
+        const symptom = document.getElementById('tknew-eq-symptom')?.value?.trim();
+        const urgency = document.getElementById('tknew-eq-urgency')?.value;
+        if (!name) { if (btn) btn.disabled = false; return App.toast('กรุณาใส่ชื่ออุปกรณ์', 'error'); }
+        if (!symptom) { if (btn) btn.disabled = false; return App.toast('กรุณาใส่อาการ', 'error'); }
+        if (!urgency) { if (btn) btn.disabled = false; return App.toast('กรุณาเลือกความเร่งด่วน', 'error'); }
+        const uMap = { critical: '🔴 ซ่อมทันที', high: '🟠 ควรซ่อมเร็ว', low: '🟡 ไม่รีบ', dispose: '⚫ ทิ้ง' };
+        const pri = urgency === 'critical' ? 'urgent' : 'normal';
+        payload = { store_id: API.getStore(), title: '🔧 ' + name, type: 'equipment', priority: pri, note: symptom + ' [' + (uMap[urgency] || urgency) + ']' };
+      } else {
+        const title = document.getElementById('tknew-title')?.value?.trim();
+        if (!title) { if (btn) btn.disabled = false; return App.toast('กรุณาใส่ Title', 'error'); }
+        payload = {
+          store_id: API.getStore(), title, type,
+          priority: document.getElementById('tknew-pri')?.value || 'normal',
+          due_date: document.getElementById('tknew-due')?.value || null,
+          note: document.getElementById('tknew-note')?.value || null,
+        };
+      }
+      const data = await API.createTask(payload);
       tk.tasks.unshift(data);
       App.closeDialog();
       fillTasks();
@@ -1008,7 +1053,7 @@ const Scr3 = (() => {
   function renderDH() {
     return `${toolbar('Daily Hub')}
     <div class="content" id="dh-content">
-      ${App.renderStoreSelector()}
+      ${App.renderStoreSelector({ noAll: true })}
       <div id="dh-kpi" class="kpi-row" style="grid-template-columns:1fr 1fr 1fr 1fr"><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div><div class="skeleton sk-kpi"></div></div>
       <div class="sl">📋 รายวัน — กดเลือกดู detail</div>
       <div style="font-size:10px;color:var(--t3);margin-bottom:6px">แสดงย้อนหลัง 7 วัน · วันก่อนหน้าดูที่ Sale History</div>
@@ -1095,11 +1140,126 @@ const Scr3 = (() => {
         ${isEditable ? `<div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-primary" style="flex:1" onclick="App.go('daily-sale',{date:'${date}'})">✏️ แก้ยอดขาย</button>
           <button class="btn btn-outline" style="flex:1" onclick="App.go('expense',{date:'${date}'})">✏️ แก้ค่าใช้จ่าย</button>
-          <button class="btn btn-outline" style="flex:1" onclick="App.go('daily-report',{date:'${date}'})">📝 ดูรายงาน</button>
+          <button class="btn btn-outline" style="flex:1" onclick="Scr3.dhViewReport('${date}')">📝 ดูรายงาน</button>
         </div>` : ''}
       </div>`;
     } catch { detailEl.innerHTML = '<div class="empty-state">โหลดข้อมูลไม่ได้</div>'; }
     finally { _busy.dhDetail = false; }
+  }
+
+
+  // ─── Daily Hub: View Report popup (read-only) ───
+  async function dhViewReport(date) {
+    App.showDialog(`<div class="popup-sheet" style="width:420px;max-height:85dvh;overflow-y:auto">
+      <div class="popup-header"><div class="popup-title">📋 Daily Report — ${App.fmtDate(date)}</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
+      <div class="skeleton sk-card" style="height:120px"></div>
+    </div>`);
+
+    try {
+      const [repData, sumData] = await Promise.all([
+        API.getDailyReport(null, date),
+        API.getS8Summary(null, date),
+      ]);
+      const r = repData.report || {};
+      const incidents = repData.incidents || [];
+      const leftovers = repData.leftovers || [];
+      const tasks = repData.tasks || [];
+      const sm = sumData || {};
+      const channels = sm.channels || [];
+      const expenses = sm.expenses || [];
+      const cash = sm.cash;
+
+      const wMap = { sunny: '☀️ แดด', cloudy: '☁️ ครึ้ม', rain: '🌧️ ฝน', heavy_rain: '⛈️ ฝนหนัก' };
+      const tMap = { above: '📈 ดีกว่าปกติ', normal: '➡️ ปกติ', below: '📉 ต่ำกว่าปกติ' };
+      const pMap = { ok: '✅ ปกติ', issue: '⚠️ มีปัญหา' };
+
+      // Sales
+      const chHtml = channels.length ? channels.map(c =>
+        `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11px"><span>${e(c.channel_key)}</span><span style="font-weight:600">${fm(c.amount)}</span></div>`
+      ).join('') + `<div style="border-top:1px solid var(--bd2);margin-top:4px;padding-top:4px;display:flex;justify-content:space-between;font-weight:700;font-size:12px"><span>Total</span><span style="color:var(--gold)">${fm(sm.total_sales || 0)}</span></div>` : '<div style="font-size:11px;color:var(--t3)">ไม่มีข้อมูล</div>';
+
+      // Expenses
+      const expHtml = expenses.length ? expenses.map(x =>
+        `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:11px"><span>${e(x.vendor_name)}</span><span style="font-weight:600;color:var(--r)">-${fm(x.total_amount)}</span></div>`
+      ).join('') : '<div style="font-size:11px;color:var(--t3)">ไม่มี</div>';
+
+      // Cash
+      let cashHtml = '';
+      if (cash) {
+        const matched = cash.is_matched;
+        const clr = matched ? 'var(--g)' : 'var(--r)';
+        cashHtml = `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">💵 CASH ON HAND</div>
+          <div style="padding:8px;border-left:3px solid ${clr};background:var(--bg2);border-radius:var(--rd)">
+            <div style="display:flex;justify-content:space-between;font-size:11px"><span>Expected</span><span>${fm(cash.expected_cash || 0)}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:11px"><span>Actual</span><span>${fm(cash.actual_cash || 0)}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-top:4px;padding-top:4px;border-top:1px solid var(--bd2)"><span>Diff</span><span style="color:${clr}">${fm(cash.difference || 0)}</span></div>
+          </div></div>`;
+      }
+
+      // Weather / Traffic / POS
+      const condHtml = `<div style="font-size:11px;line-height:2;color:var(--t2)">
+        อากาศ: ${wMap[r.weather] || '—'} · Traffic: ${tMap[r.traffic] || '—'} · POS: ${pMap[r.pos_status] || '—'}
+      </div>`;
+
+      // Incidents
+      let incHtml = '';
+      const activeInc = incidents.filter(i => i.count > 0);
+      if (activeInc.length) {
+        incHtml = `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">⚠️ เหตุการณ์ (${activeInc.reduce((s, i) => s + i.count, 0)})</div>
+          ${activeInc.map(i => {
+            const cat = INCIDENT_CATS.find(c => c.key === i.category);
+            const notes = i.notes || (i.note ? i.note.split(' | ') : []);
+            return `<div style="padding:4px 0;font-size:11px">${cat?.icon || '⚠️'} <b>${cat?.name || i.category}</b> ×${i.count}${notes.length ? '<br>' + notes.map((n, idx) => `  ${idx + 1}. ${e(n)}`).join('<br>') : ''}</div>`;
+          }).join('')}</div>`;
+      }
+
+      // Leftovers
+      let leftHtml = '';
+      const activeLft = leftovers.filter(l => l.item_name);
+      if (activeLft.length) {
+        const lvMap = { little: '🟢 นิดหน่อย', half: '🟡 ครึ่งนึง', almost_full: '🔴 เกือบหมด', full: '⚫ ทั้งจาน' };
+        leftHtml = `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">🍚 อาหารเหลือ</div>
+          ${activeLft.map(l => `<div style="font-size:11px;padding:2px 0">${e(l.item_name)} ×${l.quantity} (${lvMap[l.level] || l.level})</div>`).join('')}</div>`;
+      }
+
+      // Pending tasks
+      let taskHtml = '';
+      const pendingTasks = tasks.filter(t => t.status === 'pending');
+      if (pendingTasks.length) {
+        const icons = { equipment: '🔧', follow_up: '📋', suggestion: '💡', action: '🚨' };
+        taskHtml = `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">📋 งานค้าง (${pendingTasks.length})</div>
+          ${pendingTasks.map(t => `<div style="font-size:11px;padding:2px 0">${icons[t.type] || '📋'} ${e(t.title)}${t.assigned_to ? ' → ' + e(t.assigned_to) : ''}</div>`).join('')}</div>`;
+      }
+
+      // Overview note
+      const noteHtml = r.overview_note ? `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">📝 Note</div><div style="font-size:11px">${e(r.overview_note)}</div></div>` : '';
+
+      // Submitted status
+      const submitted = r.is_submitted;
+      const stsBadge = submitted ? '<span class="sts sts-ok">✓ Submitted</span>' : '<span class="sts sts-pend">Draft</span>';
+
+      App.showDialog(`<div class="popup-sheet" style="width:420px;max-height:85dvh;overflow-y:auto">
+        <div class="popup-header"><div class="popup-title">📋 Daily Report</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:700">📅 ${App.fmtDate(date)}</div>${stsBadge}
+        </div>
+        <div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">💰 ยอดขาย</div><div style="padding:6px 8px;background:var(--bg2);border-radius:var(--rd)">${chHtml}</div></div>
+        <div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">🧾 ค่าใช้จ่าย</div><div style="padding:6px 8px;background:var(--bg2);border-radius:var(--rd)">${expHtml}</div></div>
+        ${cashHtml}
+        <div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">🌤️ สภาพร้าน</div>${condHtml}</div>
+        ${noteHtml}${incHtml}${leftHtml}${taskHtml}
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" style="flex:1" onclick="App.closeDialog();App.go('daily-report',{date:'${date}'})">✏️ แก้ไขรายงาน</button>
+          <button class="btn btn-outline" style="flex:1" onclick="App.closeDialog()">ปิด</button>
+        </div>
+      </div>`);
+    } catch (err) {
+      App.showDialog(`<div class="popup-sheet" style="width:320px;text-align:center">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px">โหลดรายงานไม่ได้</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:12px">${e(err.message || 'Unknown error')}</div>
+        <button class="btn btn-outline" onclick="App.closeDialog()">ปิด</button>
+      </div>`);
+    }
   }
 
 
@@ -1113,7 +1273,7 @@ const Scr3 = (() => {
     s8NewRepair, s8SetUrgency, s8SaveRepair,
     s8AddEquipment, s8AddTask,
     s8Save, s8Copy, s8Share,
-    renderTasks, loadTasks, tkFilter, tkNewTask, tkSaveNew, tkToggle,
-    renderDH, loadDH, dhSelect,
+    renderTasks, loadTasks, tkFilter, tkNewTask, tkTypeChange, tkSaveNew, tkToggle,
+    renderDH, loadDH, dhSelect, dhViewReport,
   };
 })();

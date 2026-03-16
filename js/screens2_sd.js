@@ -1,5 +1,5 @@
 /**
- * Version 1.5.5 | 16 MAR 2026 | Siam Palette Group
+ * Version 1.5.6 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -543,7 +543,7 @@ const Scr2 = (() => {
       <div class="card">
         <div style="display:flex;gap:4px;margin-bottom:10px"><span class="tag tag-gray">Store: ${e(API.getStore())}</span><span class="tag tag-b">Invoice</span></div>
         <div class="fg"><label class="fl">📅 Issue Date <span class="req">*</span></label><input class="fi" type="date" id="s3f-date" value="${td()}" onchange="Scr2.s3fDateChange()"></div>
-        <div class="fg"><label class="fl">Invoice No <span class="req">*</span></label><input class="fi" id="s3f-no"></div>
+        <div class="fg"><label class="fl">Invoice No <span class="req">*</span></label><input class="fi" id="s3f-no" oninput="Scr2.s3fSyncCnNo()"></div>
         <div class="fg"><label class="fl">Vendor <span class="req">*</span></label>
           ${renderVendorInput('s3f-vendor', '')}</div>
         <div class="fg"><label class="fl">Description <span class="req">*</span></label><input class="fi" id="s3f-desc"></div>
@@ -647,6 +647,14 @@ const Scr2 = (() => {
     const fields = document.getElementById('s3f-cn-fields');
     if (fields) fields.style.display = show ? '' : 'none';
     s3f.hasCN = show;
+    if (show) s3fSyncCnNo();
+  }
+
+  function s3fSyncCnNo() {
+    if (!s3f.hasCN) return;
+    const invNo = (document.getElementById('s3f-no')?.value || '').trim();
+    const cnEl = document.getElementById('s3f-cn-no');
+    if (cnEl) cnEl.value = invNo ? invNo + '-CR' : '';
   }
 
   function s3fCalc() {
@@ -700,7 +708,10 @@ const Scr2 = (() => {
     // Credit Note validation
     if (s3f.hasCN) {
       if (!(document.getElementById('s3f-cn-no')?.value?.trim())) return App.toast('กรุณาใส่ Credit Note No', 'error');
-      if (!(parseFloat(document.getElementById('s3f-cn-amt')?.value) > 0)) return App.toast('กรุณาใส่ Credit Note Amount', 'error');
+      const cnAmt = parseFloat(document.getElementById('s3f-cn-amt')?.value) || 0;
+      if (cnAmt <= 0) return App.toast('กรุณาใส่ Credit Note Amount', 'error');
+      const invAmt = parseFloat(document.getElementById('s3f-amt')?.value) || 0;
+      if (cnAmt >= invAmt) return App.toast('Credit Note ต้องน้อยกว่ายอด Invoice', 'error');
     }
     const btn = document.getElementById('s3f-save'); if (btn) btn.disabled = true;
     try {
@@ -897,7 +908,7 @@ const Scr2 = (() => {
     // S2
     renderS2, loadS2, s2Nav, s2ShowPopup, s2SetPm, s2CalcTotal, s2PickPhoto, s2HandlePhoto, s2RemoveExtra, s2Save, s2Delete, s2ConfirmDelete,
     // S3
-    renderS3List, loadS3List, s3Reload, s3LoadMore, s3fCalc, s3fDateChange, s3fCnToggle, s3fPickPhoto, s3fHandlePhoto, s3fRemoveExtra, s3fSave,
+    renderS3List, loadS3List, s3Reload, s3LoadMore, s3fCalc, s3fDateChange, s3fCnToggle, s3fSyncCnNo, s3fPickPhoto, s3fHandlePhoto, s3fRemoveExtra, s3fSave,
     renderS3Form, loadS3Form,
     // S4
     renderS4, loadS4, s4Nav, s4Check, s4HandlePhoto, s4Submit, s4Confirm,

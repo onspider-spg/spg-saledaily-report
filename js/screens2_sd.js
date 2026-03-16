@@ -1,5 +1,5 @@
 /**
- * Version 1.6.0 | 16 MAR 2026 | Siam Palette Group
+ * Version 1.6.1 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -504,10 +504,11 @@ const Scr2 = (() => {
 
   function fillS3List() {
     const sm = s3.summary;
+    const creditTotal = s3.invoices.filter(i => i.has_credit_note).reduce((s, i) => s + (parseFloat(i.credit_note_amount) || 0), 0);
     document.getElementById('s3-kpi').innerHTML = `
       <div class="kpi-box"><div class="kpi-label">Total</div><div class="kpi-val" style="font-size:14px">${s3.invoices.length}</div></div>
       <div class="kpi-box"><div class="kpi-label">Unpaid</div><div class="kpi-val" style="font-size:14px;color:var(--r)">${fm(s3.invoices.filter(i => i.payment_status === 'unpaid').reduce((s, i) => s + (i.total_amount || 0), 0))}</div></div>
-      <div class="kpi-box"><div class="kpi-label">Paid</div><div class="kpi-val" style="font-size:14px;color:var(--g)">${fm(s3.invoices.filter(i => i.payment_status === 'paid').reduce((s, i) => s + (i.total_amount || 0), 0))}</div></div>`;
+      <div class="kpi-box"><div class="kpi-label">Credit</div><div class="kpi-val" style="font-size:14px;color:var(--g)">${creditTotal > 0 ? fm(creditTotal) : '$0.00'}</div></div>`;
 
     const el = document.getElementById('s3-list');
     if (!el) return;
@@ -515,7 +516,7 @@ const Scr2 = (() => {
     el.innerHTML = s3.invoices.map(inv => {
       const isPaid = inv.payment_status === 'paid';
       const bc = isPaid ? 'var(--g)' : 'var(--r)';
-      return `<div class="li-card" style="border-left-color:${bc};cursor:pointer" onclick="App.go('invoice-form',{id:'${inv.id}'})">
+      let html = `<div class="li-card" style="border-left-color:${bc};cursor:pointer" onclick="App.go('invoice-form',{id:'${inv.id}'})">
         <div style="display:flex;justify-content:space-between">
           <div><div style="font-size:12px;font-weight:700">${e(inv.invoice_no)}</div>
           <div style="font-size:10px;color:var(--t3)">${e(inv.vendor_name)} · ${inv.invoice_date || ''}</div></div>
@@ -523,6 +524,16 @@ const Scr2 = (() => {
           <span class="sts ${isPaid ? 'sts-ok' : 'sts-err'}">${isPaid ? 'Paid' : 'Unpaid'}</span></div>
         </div>
       </div>`;
+      if (inv.has_credit_note && inv.credit_note_no) {
+        const cnAmt = parseFloat(inv.credit_note_amount) || 0;
+        html += `<div class="li-card" style="margin-top:-8px;margin-left:24px;padding:6px 10px;background:var(--gbg);border-left:3px solid var(--g);cursor:pointer" onclick="App.go('invoice-form',{id:'${inv.id}'})">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:11px;color:var(--g);font-weight:600">↳ CN: ${e(inv.credit_note_no)}</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--g)">+${fm(cnAmt)}</div>
+          </div>
+        </div>`;
+      }
+      return html;
     }).join('');
     document.getElementById('s3-more').style.display = s3.hasMore ? '' : 'none';
   }

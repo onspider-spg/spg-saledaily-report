@@ -1,5 +1,5 @@
 /**
- * Version 1.6 | 16 MAR 2026 | Siam Palette Group
+ * Version 1.6.1 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens3_sd.js — History + Report Screens
@@ -114,7 +114,7 @@ const Scr3 = (() => {
   // ═══════════════════════════════════════════
   // S6: EXPENSE HISTORY (date range, default 3 days, filter: all/expense/invoice, sync lock)
   // ═══════════════════════════════════════════
-  let s6 = { expenses: [], invoices: [], filter: 'all', offset: 0, dateFrom: '', dateTo: '' };
+  let s6 = { expenses: [], invoices: [], filter: 'all', offset: 0, dateFrom: '', dateTo: '', _items: [] };
 
   function renderS6() {
     const now = td();
@@ -168,20 +168,70 @@ const Scr3 = (() => {
     if (s6.filter !== 'invoice') items.push(...s6.expenses.map(x => ({ ...x, _type: 'expense', _date: x.expense_date, _synced: x.sync_status === 'synced' })));
     if (s6.filter !== 'expense') items.push(...s6.invoices.map(x => ({ ...x, _type: 'invoice', _date: x.invoice_date, _synced: x.sync_status === 'synced' })));
     items.sort((a, b) => b._date.localeCompare(a._date));
+    s6._items = items;
 
     if (!items.length) { el.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูล</div>'; return; }
-    el.innerHTML = items.map(it => {
+    el.innerHTML = items.map((it, idx) => {
       const isInv = it._type === 'invoice';
       const tag = isInv ? `<span class="tag tag-o">Invoice</span>` : `<span class="tag tag-gray">Bill</span>`;
       const statusTag = isInv ? `<span class="sts ${it.payment_status === 'paid' ? 'sts-ok' : 'sts-err'}">${it.payment_status}</span>` : '';
       const lockTag = it._synced ? '<span class="sts sts-lock">🔒</span>' : '';
-      return `<div class="li-card" style="${it._synced ? 'background:var(--bg3)' : ''}"><div style="display:flex;justify-content:space-between">
+      let html = `<div class="li-card" style="${it._synced ? 'background:var(--bg3);' : ''}cursor:pointer" onclick="Scr3.showDetail(${idx})"><div style="display:flex;justify-content:space-between">
         <div><div style="font-size:12px;font-weight:700">${e(it.description || it.invoice_no)}</div>
         <div style="font-size:10px;color:var(--t3)">${e(it.vendor_name)} · ${it._date} · ${tag} ${lockTag}</div></div>
         <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--r)">-${fm(it.total_amount)}</div>${statusTag}</div>
       </div></div>`;
+      // Credit Note sub-row
+      if (isInv && it.has_credit_note && it.credit_note_no) {
+        const cnAmt = parseFloat(it.credit_note_amount) || 0;
+        html += `<div class="li-card" style="margin-top:-8px;margin-left:24px;padding:6px 10px;background:var(--gbg);border-left:3px solid var(--g);cursor:pointer" onclick="Scr3.showDetail(${idx})">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:11px;color:var(--g);font-weight:600">↳ CN: ${e(it.credit_note_no)}</div></div>
+            <div style="font-size:12px;font-weight:700;color:var(--g)">+${fm(cnAmt)}</div>
+          </div>
+        </div>`;
+      }
+      return html;
     }).join('');
     document.getElementById('s6-more').style.display = items.length >= 10 ? '' : 'none';
+  }
+
+  function showDetail(idx) {
+    const it = s6._items?.[idx];
+    if (!it) return;
+    const isInv = it._type === 'invoice';
+    const rows = [
+      ['Type', isInv ? 'Invoice' : 'Expense (Bill)'],
+      ['Date', App.fmtDate(it._date)],
+      isInv ? ['Invoice No.', it.invoice_no] : ['Doc Number', it.doc_number],
+      ['Vendor', it.vendor_name],
+      ['Description', it.description],
+      ['Amount (ex GST)', fm(it.amount_ex_gst)],
+      ['GST', fm(it.gst)],
+      ['Total', fm(it.total_amount)],
+    ];
+    if (isInv) {
+      rows.push(['Status', it.payment_status]);
+      if (it.due_date) rows.push(['Due Date', App.fmtDate(it.due_date)]);
+      if (it.has_credit_note) {
+        rows.push(['Credit Note', it.credit_note_no || '—']);
+        rows.push(['CN Amount', fm(parseFloat(it.credit_note_amount) || 0)]);
+      }
+    } else {
+      rows.push(['Payment', it.payment_method || '—']);
+    }
+    if (it._synced) rows.push(['Sync', '🔒 Synced']);
+
+    const photoHtml = it.photo_url ? `<div style="margin-top:10px"><img src="${e(it.photo_url)}" style="max-width:100%;border-radius:var(--rd);max-height:200px;object-fit:contain" onerror="this.style.display='none'"></div>` : '';
+
+    App.showDialog(`<div class="popup-sheet" style="width:380px;max-height:80vh;overflow-y:auto">
+      <div class="popup-header"><div class="popup-title">${isInv ? 'Invoice' : 'Expense'} Detail</div><button class="popup-close" onclick="App.closeDialog()">✕</button></div>
+      <div style="background:var(--bg3);border-radius:var(--rd);padding:12px;font-size:12px">
+        ${rows.map(r => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd)"><span style="color:var(--t3)">${r[0]}</span><span style="font-weight:600;text-align:right;max-width:60%;word-break:break-word">${e(r[1])}</span></div>`).join('')}
+      </div>
+      ${photoHtml}
+      <button class="btn btn-outline btn-full" style="margin-top:12px" onclick="App.closeDialog()">Close</button>
+    </div>`);
   }
 
   function s6SetFilter(f, el) {
@@ -1266,7 +1316,7 @@ const Scr3 = (() => {
   // ═══ PUBLIC ═══
   return {
     renderS5, loadS5, s5Reload, s5LoadMore,
-    renderS6, loadS6, s6Reload, s6SetFilter, s6LoadMore,
+    renderS6, loadS6, s6Reload, s6SetFilter, s6LoadMore, showDetail,
     renderS8, loadS8, s8Nav, s8SetTab, s8Pick, s8IncChange, s8IncNote,
     s8LeftUpdate, s8LeftRemove, s8AddLeftover, s8LeftLevel,
     s8ToggleTask, s8NewTask, s8SaveNewTask,

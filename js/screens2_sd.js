@@ -1,5 +1,5 @@
 /**
- * Version 1.5.6 | 16 MAR 2026 | Siam Palette Group
+ * Version 1.6.0 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * screens2_sd.js — Input Screens S1-S4
@@ -564,9 +564,18 @@ const Scr2 = (() => {
           <div class="chip" onclick="Scr2.s3fCnToggle(true,this)">Yes</div>
         </div></div>
         <div id="s3f-cn-fields" style="display:none">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:6px">CN No. auto = INV-xxxx-CR</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div class="fg"><label class="fl">Credit Note No <span class="req">*</span></label><input class="fi" id="s3f-cn-no" placeholder="CN-001"></div>
-            <div class="fg"><label class="fl">Credit Note Amount <span class="req">*</span></label><input class="fi" type="number" step="0.01" id="s3f-cn-amt" placeholder="0.00"></div>
+            <div class="fg"><label class="fl">Credit Note No</label><input class="fi" id="s3f-cn-no" readonly style="background:var(--bg3)"></div>
+            <div class="fg"><label class="fl">CR Reason <span class="req">*</span></label>
+              <select class="fi" id="s3f-cr-reason"><option value="">-- เลือก --</option><option value="return">สินค้าคืน (Return)</option><option value="damaged">ชำรุด (Damaged)</option><option value="discount">ส่วนลด (Discount)</option><option value="overcharge">คิดเกิน (Overcharge)</option></select>
+            </div>
+          </div>
+          <div class="fg"><label class="fl">CR Description <span class="req">*</span></label><input class="fi" id="s3f-cr-desc" placeholder="e.g. เนื้อ 2kg ชำรุด"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div class="fg"><label class="fl">CR Amount <span class="req">*</span></label><input class="fi" type="number" step="0.01" id="s3f-cn-amt" placeholder="0.00" style="color:var(--g);font-weight:700" oninput="Scr2.s3fCalc()"></div>
+            <div class="fg"><label class="fl">CR GST</label><input class="fi" type="number" step="0.01" id="s3f-cr-gst" placeholder="0.00" oninput="Scr2.s3fCalc()"></div>
+            <div class="fg"><label class="fl">CR Total <span class="tag tag-b" style="font-size:8px">AUTO</span></label><input class="fi" id="s3f-cr-total" readonly style="background:var(--bg3);color:var(--g);font-weight:700"></div>
           </div>
         </div>
         <div class="fg"><label class="fl">📸 Invoice Photo <span class="req">*</span></label>
@@ -612,9 +621,15 @@ const Scr2 = (() => {
       const fields = document.getElementById('s3f-cn-fields');
       if (fields) fields.style.display = '';
       const cnNo = document.getElementById('s3f-cn-no');
+      if (cnNo) cnNo.value = inv.credit_note_no || (inv.invoice_no ? inv.invoice_no + '-CR' : '');
       const cnAmt = document.getElementById('s3f-cn-amt');
-      if (cnNo) cnNo.value = inv.credit_note_no || '';
-      if (cnAmt) cnAmt.value = inv.credit_note_amount || '';
+      if (cnAmt) cnAmt.value = inv.cr_amount_ex_gst ?? inv.credit_note_amount ?? '';
+      const crReason = document.getElementById('s3f-cr-reason');
+      if (crReason) crReason.value = inv.cr_reason || '';
+      const crDesc = document.getElementById('s3f-cr-desc');
+      if (crDesc) crDesc.value = inv.cr_description || '';
+      const crGst = document.getElementById('s3f-cr-gst');
+      if (crGst) crGst.value = inv.cr_gst || '';
     }
     s3fCalc();
     // NICE #8: Sync lock check for invoice_date
@@ -648,6 +663,7 @@ const Scr2 = (() => {
     if (fields) fields.style.display = show ? '' : 'none';
     s3f.hasCN = show;
     if (show) s3fSyncCnNo();
+    s3fCalc();
   }
 
   function s3fSyncCnNo() {
@@ -660,7 +676,15 @@ const Scr2 = (() => {
   function s3fCalc() {
     const a = parseFloat(document.getElementById('s3f-amt')?.value) || 0;
     const g = parseFloat(document.getElementById('s3f-gst')?.value) || 0;
-    document.getElementById('s3f-total').value = fm(a + g);
+    const invTotal = a + g;
+    document.getElementById('s3f-total').value = fm(invTotal);
+    if (s3f.hasCN) {
+      const crAmt = parseFloat(document.getElementById('s3f-cn-amt')?.value) || 0;
+      const crGst = parseFloat(document.getElementById('s3f-cr-gst')?.value) || 0;
+      const crTotal = crAmt + crGst;
+      const crTotalEl = document.getElementById('s3f-cr-total');
+      if (crTotalEl) crTotalEl.value = fm(crTotal);
+    }
   }
 
   let _s3fPhotoTarget = 'main';
@@ -707,11 +731,15 @@ const Scr2 = (() => {
     if (dueDate <= issueDate) return App.toast('Due Date ต้องหลังจาก Issue Date', 'error');
     // Credit Note validation
     if (s3f.hasCN) {
-      if (!(document.getElementById('s3f-cn-no')?.value?.trim())) return App.toast('กรุณาใส่ Credit Note No', 'error');
-      const cnAmt = parseFloat(document.getElementById('s3f-cn-amt')?.value) || 0;
-      if (cnAmt <= 0) return App.toast('กรุณาใส่ Credit Note Amount', 'error');
+      if (!(document.getElementById('s3f-cr-reason')?.value)) return App.toast('กรุณาเลือก CR Reason', 'error');
+      if (!(document.getElementById('s3f-cr-desc')?.value?.trim())) return App.toast('กรุณาใส่ CR Description', 'error');
+      const crAmt = parseFloat(document.getElementById('s3f-cn-amt')?.value) || 0;
+      if (crAmt <= 0) return App.toast('กรุณาใส่ CR Amount', 'error');
+      const crGst = parseFloat(document.getElementById('s3f-cr-gst')?.value) || 0;
+      const crTotal = crAmt + crGst;
       const invAmt = parseFloat(document.getElementById('s3f-amt')?.value) || 0;
-      if (cnAmt >= invAmt) return App.toast('Credit Note ต้องน้อยกว่ายอด Invoice', 'error');
+      const invGst = parseFloat(document.getElementById('s3f-gst')?.value) || 0;
+      if (crTotal >= (invAmt + invGst)) return App.toast('CR Total ต้องน้อยกว่ายอด Invoice', 'error');
     }
     const btn = document.getElementById('s3f-save'); if (btn) btn.disabled = true;
     try {
@@ -727,8 +755,11 @@ const Scr2 = (() => {
         extra_photos: s3f.extraPhotos.length ? s3f.extraPhotos : [],
         invoice_id: s3f.id,
         has_credit_note: s3f.hasCN,
-        credit_note_no: s3f.hasCN ? (document.getElementById('s3f-cn-no')?.value?.trim() || '') : null,
-        credit_note_amount: s3f.hasCN ? (document.getElementById('s3f-cn-amt')?.value || '0') : '0',
+        credit_note_no: s3f.hasCN ? (document.getElementById('s3f-cn-no')?.value || '') : null,
+        cr_reason: s3f.hasCN ? (document.getElementById('s3f-cr-reason')?.value || '') : null,
+        cr_description: s3f.hasCN ? (document.getElementById('s3f-cr-desc')?.value?.trim() || '') : null,
+        cr_amount_ex_gst: s3f.hasCN ? (parseFloat(document.getElementById('s3f-cn-amt')?.value) || 0) : 0,
+        cr_gst: s3f.hasCN ? (parseFloat(document.getElementById('s3f-cr-gst')?.value) || 0) : 0,
       });
       App.toast('บันทึกสำเร็จ', 'success');
       App.go('invoice');

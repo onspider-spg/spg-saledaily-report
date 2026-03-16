@@ -1,5 +1,5 @@
 /**
- * Version 1.8.5 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.8.6 | 16 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -125,7 +125,6 @@ const App = (() => {
     const sb = document.getElementById('dk-sidebar');
     if (!sb) return;
     const tl = S.session?.tier_level || 99;
-    const isAdmin = tl <= 2;
 
     const groups = [
       { ico: '◇', label: 'Dashboard', route: 'dashboard', type: 'item' },
@@ -147,17 +146,19 @@ const App = (() => {
       ]},
     ];
 
-    // Admin group — visible to T1/T2 only
-    if (isAdmin) {
-      groups.push({ ico: '⚙', label: 'Admin', items: [
-        { label: 'Account Review', route: 'acc-review' },
-        { label: 'Report Dashboard', route: 'admin-report' },
-        { label: 'Channels', route: 'channels' },
-        { label: 'Vendors', route: 'vendors' },
-        { label: 'Config', route: 'config' },
-        { label: 'User Access', route: 'access' },
-        { label: 'Audit', route: 'audit' },
-      ]});
+    // Admin group — permission-gated per menu item
+    const hp = (k) => tl <= 2 || S.permissions[k] === true;
+    const adminItems = [
+      hp('sd_acc_review')         && { label: 'Account Review', route: 'acc-review' },
+      hp('sd_view_admin_reports') && { label: 'Report Dashboard', route: 'admin-report' },
+      hp('sd_manage_channels')    && { label: 'Channels', route: 'channels' },
+      hp('sd_manage_vendors')     && { label: 'Vendors', route: 'vendors' },
+      hp('sd_manage_settings')    && { label: 'Config', route: 'config' },
+      hp('sd_manage_permissions') && { label: 'User Access', route: 'access' },
+      hp('sd_view_audit')         && { label: 'Audit', route: 'audit' },
+    ].filter(Boolean);
+    if (adminItems.length) {
+      groups.push({ ico: '⚙', label: 'Admin', items: adminItems });
     }
 
     const cl = S.sidebarCollapsed ? ' collapsed' : '';
@@ -240,6 +241,18 @@ const App = (() => {
     ];
     if (tl <= 2) {
       sections.push({ sec: 'Admin', items: [{ l: 'Account Review', r: 'acc-review' }, { l: 'Report Dashboard', r: 'admin-report' }, { l: 'Channels', r: 'channels' }, { l: 'Vendors', r: 'vendors' }, { l: 'Config', r: 'config' }, { l: 'User Access', r: 'access' }, { l: 'Audit', r: 'audit' }] });
+    } else {
+      const hp = (k) => S.permissions[k] === true;
+      const ai = [
+        hp('sd_acc_review')         && { l: 'Account Review', r: 'acc-review' },
+        hp('sd_view_admin_reports') && { l: 'Report Dashboard', r: 'admin-report' },
+        hp('sd_manage_channels')    && { l: 'Channels', r: 'channels' },
+        hp('sd_manage_vendors')     && { l: 'Vendors', r: 'vendors' },
+        hp('sd_manage_settings')    && { l: 'Config', r: 'config' },
+        hp('sd_manage_permissions') && { l: 'User Access', r: 'access' },
+        hp('sd_view_audit')         && { l: 'Audit', r: 'audit' },
+      ].filter(Boolean);
+      if (ai.length) sections.push({ sec: 'Admin', items: ai });
     }
 
     let html = `<div class="mob-sd-header">

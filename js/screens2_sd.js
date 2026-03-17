@@ -187,7 +187,7 @@ const Scr2 = (() => {
       return `<div class="ch-row"><div class="ch-icon">${ico}</div><div style="flex:1;min-width:0">
         <div class="ch-name">${e(ch.channel_label)}${hasDip}</div>
         ${ch.finance_sub_category ? `<div class="ch-sub">Revenue → ${e(ch.finance_sub_category)}</div>` : ''}
-      </div><input class="ch-input" type="number" step="0.01" min="0" value="${v}" data-key="${ch.channel_key}"
+      </div><input class="ch-input" type="number" step="1" min="0" value="${v}" data-key="${ch.channel_key}"
         oninput="Scr2.s1Recalc();Scr2.s1MarkDirty()" ${s1.synced ? 'disabled' : ''}></div>`;
     }).join('');
     s1Recalc();

@@ -101,14 +101,22 @@ const Scr2 = (() => {
   // ═══════════════════════════════════════════
   // S1: DAILY SALE
   // ═══════════════════════════════════════════
-  let s1 = { date: '', channels: [], amounts: {}, photoCard: null, photoCash: null, extraPhotos: [], synced: false, saleId: null, _target: null };
+  let s1 = { date: '', channels: [], amounts: {}, photoCard: null, photoCash: null, extraPhotos: [], synced: false, saleId: null, _target: null, _dirty: false, _editMode: false, _originalDate: null, dips: [] };
 
   function renderS1(params) {
+    const isEdit = params?.edit || false;
     s1.date = params?.date || s1.date || td();
-    return `${toolbar('Daily Sale')}
+    s1._editMode = isEdit;
+    if (isEdit) s1._originalDate = s1.date;
+    const title = isEdit ? '✏️ แก้ยอดขาย' : 'Daily Sale';
+    const backRoute = isEdit ? 'daily-hub' : 'dashboard';
+    const dateSec = isEdit
+      ? `<div class="dbar"><div class="dbar-label" id="s1-label" style="cursor:pointer" onclick="document.getElementById('s1-edit-picker').showPicker()">📅 ${App.fmtDate(s1.date)} <span style="font-size:10px;color:var(--acc)">กดเพื่อเปลี่ยนวัน</span></div><input type="date" id="s1-edit-picker" value="${s1.date}" onchange="Scr2.s1EditDate(this.value)" style="position:absolute;opacity:0;width:0;height:0"></div>`
+      : dateBar('s1', s1.date, 'Scr2.s1Nav');
+    return `<div class="toolbar"><button class="toolbar-back" onclick="App.go('${backRoute}')">←</button><div class="toolbar-title">${title}</div></div>
     <div class="content" id="s1-content">
       ${App.renderStoreSelector({ noAll: true })}
-      ${dateBar('s1', s1.date, 'Scr2.s1Nav')}
+      ${dateSec}
       <div id="s1-lock"></div>
       <div class="sl">ช่องทางขาย</div>
       <div class="card" style="padding:10px">
@@ -117,11 +125,9 @@ const Scr2 = (() => {
           <span>ยอดรวมทั้งหมด</span><span style="font-size:18px" id="s1-total">$0.00</span>
         </div>
         <details style="margin-top:8px;border:1px solid var(--bd2);border-radius:var(--rd);padding:8px 10px">
-          <summary style="font-size:12px;font-weight:600;cursor:pointer">▸ Cancel / ผลต่าง (ถ้ามี)</summary>
-          <div style="padding-top:8px">
-            <div class="fg"><label class="fl">💰 ยอด Cancel</label><input class="fi" id="s1-cancel-amt" placeholder="0.00" type="number" step="0.01"></div>
-            <div class="fg"><label class="fl">📝 เหตุผล</label><input class="fi" id="s1-cancel-reason" placeholder="เช่น ลูกค้าจ่ายไม่ตรง"></div>
-          </div>
+          <summary style="font-size:12px;font-weight:600;cursor:pointer">▸ ดิบ (ถ้ามี)</summary>
+          <div id="s1-dips" style="padding-top:8px"></div>
+          <button class="btn btn-outline btn-sm" id="s1-add-dip" style="margin-top:6px;font-size:10px" onclick="Scr2.s1AddDip()">+ เพิ่มรายการดิบ</button>
         </details>
       </div>
       <div class="sl">📸 Photo (mandatory)</div>
@@ -134,12 +140,15 @@ const Scr2 = (() => {
         <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:10px" onclick="Scr2.s1PickPhoto('extra')">+ เพิ่มรูป/ไฟล์</button>
         <input type="file" id="s1-file" accept="" style="display:none" onchange="Scr2.s1HandlePhoto(event)">
       </div>
-      <div style="margin-top:12px"><button class="btn btn-gold btn-full" style="padding:10px" id="s1-save" onclick="Scr2.s1Save()">💾 Save</button></div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-gold" style="flex:1;padding:10px" id="s1-save" onclick="Scr2.s1Save()">💾 Save</button><button class="btn btn-outline" style="padding:10px" id="s1-clear" onclick="Scr2.s1Clear()">🗑 Clear</button></div>
     </div>`;
   }
 
   async function loadS1(params) {
     if (params?.date) s1.date = params.date;
+    if (params?.edit) { s1._editMode = true; s1._originalDate = s1.date; }
+    // Skip API reload if form is dirty and same date (state persistence)
+    if (s1._dirty) { fillS1(); return; }
     if (_busy.s1) return; _busy.s1 = true;
     try {
       const data = await API.getDailySale(s1.date);
@@ -151,13 +160,13 @@ const Scr2 = (() => {
       s1.photoCash = data.sale?.photo_cash_url || null;
       s1.extraPhotos = data.sale?.extra_photos || [];
       if (data.sale?.sd_sale_channels) data.sale.sd_sale_channels.forEach(ch => { s1.amounts[ch.channel_key] = ch.amount; });
-      fillS1();
-      if (data.sale) {
-        const ca = document.getElementById('s1-cancel-amt');
-        const cr = document.getElementById('s1-cancel-reason');
-        if (ca) ca.value = data.sale.cancel_amount || '';
-        if (cr) cr.value = data.sale.cancel_reason || '';
+      // Load dips — migrate from old cancel fields if no dips exist yet
+      s1.dips = data.sale?.dips || [];
+      if (!s1.dips.length && data.sale?.cancel_amount && parseFloat(data.sale.cancel_amount) !== 0) {
+        s1.dips = [{ type: 'cash', channel_key: '', amount: parseFloat(data.sale.cancel_amount) || 0, note: data.sale.cancel_reason || '' }];
       }
+      s1._dirty = false;
+      fillS1();
     } catch (err) { App.toast('โหลดข้อมูลไม่สำเร็จ', 'error'); }
     finally { _busy.s1 = false; }
   }
@@ -168,25 +177,35 @@ const Scr2 = (() => {
     if (!el) return;
     if (!s1.channels.length) { el.innerHTML = '<div class="empty-state">ไม่มี channel config</div>'; return; }
     const icons = { card_sale: '💳', cash_sale: '💵', delivery_sale: '🛵', other: '📦' };
+    // Build dip map for asterisk marking
+    const dipMap = {};
+    s1.dips.forEach(d => { if (d.channel_key) dipMap[d.channel_key] = true; });
     el.innerHTML = s1.channels.map(ch => {
       const v = s1.amounts[ch.channel_key] ?? '';
       const ico = icons[ch.dashboard_group] || '📦';
+      const hasDip = dipMap[ch.channel_key] ? '<span style="color:var(--r);font-weight:700"> *</span>' : '';
       return `<div class="ch-row"><div class="ch-icon">${ico}</div><div style="flex:1;min-width:0">
-        <div class="ch-name">${e(ch.channel_label)}</div>
+        <div class="ch-name">${e(ch.channel_label)}${hasDip}</div>
         ${ch.finance_sub_category ? `<div class="ch-sub">Revenue → ${e(ch.finance_sub_category)}</div>` : ''}
       </div><input class="ch-input" type="number" step="0.01" min="0" value="${v}" data-key="${ch.channel_key}"
-        oninput="Scr2.s1Recalc()" ${s1.synced ? 'disabled' : ''}></div>`;
+        oninput="Scr2.s1Recalc();Scr2.s1MarkDirty()" ${s1.synced ? 'disabled' : ''}></div>`;
     }).join('');
     s1Recalc();
+    // Render dips
+    s1RenderDips();
     // Photo state
     const pc = document.getElementById('s1-photo-card');
     if (pc && s1.photoCard) { pc.innerHTML = `<img src="${s1.photoCard}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`; pc.style.border = 'none'; }
     // Extra photos
     const epEl = document.getElementById('s1-extra-photos');
     if (epEl) epEl.innerHTML = renderExtraPhotos(s1.extraPhotos, 's1');
-    // Disable save if synced
+    // Disable controls if synced
     const btn = document.getElementById('s1-save');
     if (btn) btn.disabled = s1.synced;
+    const addDipBtn = document.getElementById('s1-add-dip');
+    if (addDipBtn) addDipBtn.disabled = s1.synced;
+    const clearBtn = document.getElementById('s1-clear');
+    if (clearBtn) clearBtn.disabled = s1.synced;
   }
 
   function s1Recalc() {
@@ -197,6 +216,9 @@ const Scr2 = (() => {
   }
 
   function s1Nav(delta, dateVal) {
+    if (s1._dirty && !confirm('มีข้อมูลที่ยังไม่ได้ Save ต้องการเปลี่ยนวันไหม?')) return;
+    s1._dirty = false;
+    s1.dips = [];
     if (dateVal) s1.date = dateVal;
     else s1.date = App.addDays(s1.date, delta);
     const lbl = document.getElementById('s1-label');
@@ -244,17 +266,25 @@ const Scr2 = (() => {
     if (!s1.photoCard) return App.toast('กรุณาถ่ายรูป Card Summary', 'error');
     const channels = {};
     document.querySelectorAll('.ch-input').forEach(inp => { channels[inp.dataset.key] = inp.value || '0'; });
+    // Collect dips (filter empty amounts)
+    const dips = s1.dips.filter(d => d.amount && parseFloat(d.amount) !== 0);
     const btn = document.getElementById('s1-save');
     if (btn) btn.disabled = true;
     try {
-      const resp = await API.saveDailySale({
+      const payload = {
         store_id: API.getStore(), sale_date: s1.date, channels,
         photo_card_url: s1.photoCard, photo_cash_url: s1.photoCash,
         extra_photos: s1.extraPhotos.length ? s1.extraPhotos : [],
-        cancel_amount: document.getElementById('s1-cancel-amt')?.value || null,
-        cancel_reason: document.getElementById('s1-cancel-reason')?.value || null,
-      });
+        dips: dips.length ? dips : [],
+      };
+      // Edit mode: send original_date if date was changed
+      if (s1._editMode && s1._originalDate && s1._originalDate !== s1.date) {
+        payload.original_date = s1._originalDate;
+      }
+      const resp = await API.saveDailySale(payload);
       s1.saleId = resp.daily_sale_id;
+      s1._dirty = false;
+      if (s1._editMode && s1._originalDate !== s1.date) s1._originalDate = s1.date;
       // Update dashboard cache
       if (App.S.dashboard?.today && s1.date === td()) {
         App.S.dashboard.today.total_sales = resp.total_sales;
@@ -263,6 +293,103 @@ const Scr2 = (() => {
       App.toast('บันทึกสำเร็จ', 'success');
     } catch (err) { App.toast(err.message || 'บันทึกไม่สำเร็จ', 'error'); }
     finally { if (btn) btn.disabled = false; }
+  }
+
+  // ── State Persistence ──
+  function s1MarkDirty() { s1._dirty = true; }
+
+  function s1Clear() {
+    if (!confirm('ล้างข้อมูลทั้งหมดในฟอร์ม?')) return;
+    s1.amounts = {};
+    s1.photoCard = null; s1.photoCash = null;
+    s1.extraPhotos = [];
+    s1.dips = [];
+    s1._dirty = false;
+    fillS1();
+    const pc = document.getElementById('s1-photo-card');
+    if (pc) { pc.innerHTML = '<div>📸</div><div>Card Summary</div><div style="color:var(--r)">*</div>'; pc.style.border = ''; }
+  }
+
+  // ── Edit Mode: Date Change ──
+  async function s1EditDate(newDate) {
+    if (newDate === s1.date) return;
+    try {
+      const data = await API.getDailySale(newDate);
+      if (data.is_synced) {
+        App.toast('วันที่ ' + App.fmtDate(newDate) + ' ถูก Lock แล้ว — ย้ายไม่ได้', 'error');
+        const pk = document.getElementById('s1-edit-picker');
+        if (pk) pk.value = s1.date;
+        return;
+      }
+      if (data.sale) {
+        if (!confirm('วันที่ ' + App.fmtDate(newDate) + ' มีข้อมูลอยู่แล้ว\nต้องการทับข้อมูลเดิมไหม?')) {
+          const pk = document.getElementById('s1-edit-picker');
+          if (pk) pk.value = s1.date;
+          return;
+        }
+      }
+      s1.date = newDate;
+      s1._dirty = true;
+      const lbl = document.getElementById('s1-label');
+      if (lbl) lbl.innerHTML = '📅 ' + App.fmtDate(s1.date) + ' <span style="font-size:10px;color:var(--acc)">กดเพื่อเปลี่ยนวัน</span>';
+      App.toast('เปลี่ยนวันเป็น ' + App.fmtDate(newDate), 'success');
+    } catch (err) {
+      App.toast('เช็ควันที่ไม่สำเร็จ', 'error');
+      const pk = document.getElementById('s1-edit-picker');
+      if (pk) pk.value = s1.date;
+    }
+  }
+
+  // ── Dip (ดิบ) Functions ──
+  function s1AddDip() {
+    s1.dips.push({ type: 'card', channel_key: '', amount: '', note: '' });
+    s1RenderDips();
+    s1MarkDirty();
+  }
+
+  function s1RemoveDip(idx) {
+    s1.dips.splice(idx, 1);
+    s1MarkDirty();
+    // Refresh entire S1 to update channel asterisks
+    fillS1();
+  }
+
+  function s1DipUpdate(idx, field, value) {
+    if (!s1.dips[idx]) return;
+    s1.dips[idx][field] = value;
+    if (field === 'type' && value === 'cash') s1.dips[idx].channel_key = '';
+    s1MarkDirty();
+    // Re-render dips if type changed (to show/hide channel dropdown)
+    if (field === 'type') s1RenderDips();
+    // Update channel asterisks if channel changed
+    if (field === 'channel_key') fillS1();
+  }
+
+  function s1RenderDips() {
+    const el = document.getElementById('s1-dips');
+    if (!el) return;
+    if (!s1.dips.length) { el.innerHTML = '<div style="font-size:11px;color:var(--t3);padding:4px 0">ไม่มีรายการดิบ</div>'; return; }
+    const cardChs = s1.channels.filter(c => c.dashboard_group === 'card_sale');
+    el.innerHTML = s1.dips.map((d, i) => {
+      const chSel = d.type === 'card' ? `<select class="fi" style="flex:1;font-size:11px" onchange="Scr2.s1DipUpdate(${i},'channel_key',this.value)">
+        <option value="">-- Channel --</option>
+        ${cardChs.map(c => `<option value="${c.channel_key}" ${c.channel_key === d.channel_key ? 'selected' : ''}>${e(c.channel_label)}</option>`).join('')}
+      </select>` : '<div style="flex:1;font-size:11px;color:var(--t3);padding:6px">Cash (ไม่ต้องเลือก Channel)</div>';
+      return `<div style="border:1px solid var(--bd2);border-radius:var(--rd);padding:8px;margin-bottom:6px;background:var(--bg3)">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+          <select class="fi" style="flex:0 0 80px;font-size:11px" onchange="Scr2.s1DipUpdate(${i},'type',this.value)">
+            <option value="card" ${d.type === 'card' ? 'selected' : ''}>Card</option>
+            <option value="cash" ${d.type === 'cash' ? 'selected' : ''}>Cash</option>
+          </select>
+          ${chSel}
+          <button class="btn btn-outline btn-sm" style="flex:0 0 auto;color:var(--r);border-color:var(--r);font-size:10px;padding:2px 6px" onclick="Scr2.s1RemoveDip(${i})" ${s1.synced ? 'disabled' : ''}>🗑</button>
+        </div>
+        <div style="display:flex;gap:6px">
+          <input class="fi" type="number" step="0.01" value="${d.amount}" placeholder="จำนวน (+/-)" style="flex:1;font-size:11px" oninput="Scr2.s1DipUpdate(${i},'amount',this.value)">
+          <input class="fi" type="text" value="${e(d.note || '')}" placeholder="หมายเหตุ" style="flex:2;font-size:11px" oninput="Scr2.s1DipUpdate(${i},'note',this.value)">
+        </div>
+      </div>`;
+    }).join('');
   }
 
 
@@ -973,6 +1100,7 @@ const Scr2 = (() => {
     vnShow, vnFilter, vnPick, vnCreate, vnDoCreate,
     // S1
     renderS1, loadS1, s1Nav, s1Recalc, s1PickPhoto, s1HandlePhoto, s1RemoveExtra, s1Save,
+    s1MarkDirty, s1Clear, s1EditDate, s1AddDip, s1RemoveDip, s1DipUpdate,
     // S2
     renderS2, loadS2, s2Nav, s2ShowPopup, s2SetPm, s2CalcTotal, s2PickPhoto, s2HandlePhoto, s2RemoveExtra, s2Save, s2Delete, s2ConfirmDelete,
     // S3

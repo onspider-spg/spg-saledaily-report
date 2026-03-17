@@ -1200,7 +1200,7 @@ const Scr3 = (() => {
           <div style="display:flex;justify-content:space-between;font-size:11px"><span>Variance</span><span style="color:${cashColor};font-weight:600">${fm(cash.difference || 0)}</span></div>
         </div>` : ''}
         ${isEditable ? `<div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary" style="flex:1" onclick="App.go('daily-sale',{date:'${date}'})">✏️ แก้ยอดขาย</button>
+          <button class="btn btn-primary" style="flex:1" onclick="App.go('daily-sale-edit',{date:'${date}'})">✏️ แก้ยอดขาย</button>
           <button class="btn btn-outline" style="flex:1" onclick="App.go('expense',{date:'${date}'})">✏️ แก้ค่าใช้จ่าย</button>
           <button class="btn btn-outline" style="flex:1" onclick="Scr3.dhViewReport('${date}')">📝 ดูรายงาน</button>
         </div>` : ''}

@@ -30,6 +30,7 @@ const App = (() => {
     'no-access':      { render: () => renderNoAccess() },
     'dashboard':      { render: () => Scr.renderDashboard(),  onLoad: () => Scr.loadDashboard() },
     'daily-sale':     { render: (p) => Scr2.renderS1(p),            onLoad: (p) => Scr2.loadS1(p) },
+    'daily-sale-edit':{ render: (p) => Scr2.renderS1({ ...p, edit: true }), onLoad: (p) => Scr2.loadS1({ ...p, edit: true }) },
     'expense':        { render: (p) => Scr2.renderS2(p),            onLoad: (p) => Scr2.loadS2(p) },
     'invoice':        { render: () => Scr2.renderS3List(),          onLoad: () => Scr2.loadS3List(true) },
     'invoice-form':   { render: (p) => Scr2.renderS3Form(p),       onLoad: (p) => Scr2.loadS3Form(p) },

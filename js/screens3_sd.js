@@ -249,6 +249,7 @@ const Scr3 = (() => {
     s8.date = s8.date || td();
     return `${toolbar('Daily Report')}
     <div class="content" id="s8-content">
+      ${App.renderStoreSelector({ noAll: true })}
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 0 10px;font-size:13px;font-weight:600">
         <span class="dbar-btn" onclick="Scr3.s8Nav(-1)">‹</span>
         <span id="s8-date-label">📅 ${App.fmtDate(s8.date)}</span>

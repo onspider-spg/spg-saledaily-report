@@ -125,9 +125,9 @@ const Scr2 = (() => {
           <span>ยอดรวมทั้งหมด</span><span style="font-size:18px" id="s1-total">$0.00</span>
         </div>
         <details style="margin-top:8px;border:1px solid var(--bd2);border-radius:var(--rd);padding:8px 10px">
-          <summary style="font-size:12px;font-weight:600;cursor:pointer">▸ ดิบ (ถ้ามี)</summary>
+          <summary style="font-size:12px;font-weight:600;cursor:pointer">▸ Diff (ถ้ามี)</summary>
           <div id="s1-dips" style="padding-top:8px"></div>
-          <button class="btn btn-outline btn-sm" id="s1-add-dip" style="margin-top:6px;font-size:10px" onclick="Scr2.s1AddDip()">+ เพิ่มรายการดิบ</button>
+          <button class="btn btn-outline btn-sm" id="s1-add-dip" style="margin-top:6px;font-size:10px" onclick="Scr2.s1AddDip()">+ เพิ่มรายการ Diff</button>
         </details>
       </div>
       <div class="sl">📸 Photo (mandatory)</div>
@@ -368,7 +368,7 @@ const Scr2 = (() => {
   function s1RenderDips() {
     const el = document.getElementById('s1-dips');
     if (!el) return;
-    if (!s1.dips.length) { el.innerHTML = '<div style="font-size:11px;color:var(--t3);padding:4px 0">ไม่มีรายการดิบ</div>'; return; }
+    if (!s1.dips.length) { el.innerHTML = '<div style="font-size:11px;color:var(--t3);padding:4px 0">ไม่มีรายการ Diff</div>'; return; }
     const cardChs = s1.channels.filter(c => c.dashboard_group === 'card_sale');
     el.innerHTML = s1.dips.map((d, i) => {
       const chSel = d.type === 'card' ? `<select class="fi" style="flex:1;font-size:11px" onchange="Scr2.s1DipUpdate(${i},'channel_key',this.value)">

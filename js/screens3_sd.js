@@ -508,6 +508,7 @@ const Scr3 = (() => {
         <button class="cnt-btn" style="color:var(--r);border-color:var(--r)" onclick="Scr3.s8LeftRemove(${i})">✕</button>
       </div>
       <div class="chips" style="margin:0">${LEVEL_OPTS.map(lv => `<div class="chip${l.level === lv.key ? ' on' : ''}" onclick="Scr3.s8LeftLevel(${i},'${lv.key}',this)">${lv.label}</div>`).join('')}</div>
+      <input class="fi" style="font-size:11px;padding:4px 6px;margin-top:6px;width:100%" value="${e(l.note || '')}" placeholder="หมายเหตุ เช่น ทำเยอะเกิน, ขายไม่ออก..." oninput="Scr3.s8LeftUpdate(${i},'note',this.value)">
     </div>`).join('');
   }
 
@@ -664,7 +665,7 @@ const Scr3 = (() => {
 
   function s8LeftUpdate(idx, field, val) { if (s8.leftovers[idx]) s8.leftovers[idx][field] = field === 'quantity' ? parseInt(val) || 1 : val; }
   function s8LeftRemove(idx) { s8.leftovers.splice(idx, 1); document.getElementById('s8-leftovers').innerHTML = renderLeftovers(); }
-  function s8AddLeftover() { s8.leftovers.push({ item_name: '', quantity: 1, level: 'half' }); document.getElementById('s8-leftovers').innerHTML = renderLeftovers(); }
+  function s8AddLeftover() { s8.leftovers.push({ item_name: '', quantity: 1, level: 'half', note: '' }); document.getElementById('s8-leftovers').innerHTML = renderLeftovers(); }
   function s8LeftLevel(idx, level, el) {
     if (s8.leftovers[idx]) s8.leftovers[idx].level = level;
     el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
@@ -940,7 +941,7 @@ const Scr3 = (() => {
     if (activeLft.length) {
       const lvMap = { little: '🟢 นิดหน่อย', half: '🟡 ครึ่งนึง', almost_full: '🔴 เกือบหมด', full: '⚫ ทั้งจาน' };
       text += '🍚 อาหารเหลือ\n';
-      activeLft.forEach(l => { text += `  ${l.item_name} ×${l.quantity} (${lvMap[l.level] || l.level})\n`; });
+      activeLft.forEach(l => { text += `  ${l.item_name} ×${l.quantity} (${lvMap[l.level] || l.level})${l.note ? ' — ' + l.note : ''}\n`; });
       text += '\n';
     }
 
@@ -1281,7 +1282,7 @@ const Scr3 = (() => {
       if (activeLft.length) {
         const lvMap = { little: '🟢 นิดหน่อย', half: '🟡 ครึ่งนึง', almost_full: '🔴 เกือบหมด', full: '⚫ ทั้งจาน' };
         leftHtml = `<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px">🍚 อาหารเหลือ</div>
-          ${activeLft.map(l => `<div style="font-size:11px;padding:2px 0">${e(l.item_name)} ×${l.quantity} (${lvMap[l.level] || l.level})</div>`).join('')}</div>`;
+          ${activeLft.map(l => `<div style="font-size:11px;padding:2px 0">${e(l.item_name)} ×${l.quantity} (${lvMap[l.level] || l.level})${l.note ? ' — ' + e(l.note) : ''}</div>`).join('')}</div>`;
       }
 
       // Pending tasks

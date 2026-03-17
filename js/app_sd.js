@@ -345,7 +345,7 @@ const App = (() => {
     return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
   }
   function fmtDateShort(dateStr) { if (!dateStr) return ''; const d = new Date(dateStr + 'T00:00:00'); return d.getDate() + '/' + (d.getMonth() + 1); }
-  function todayStr() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function todayStr() { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Australia/Sydney' })); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function addDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
   // ═══ STORE SELECTOR (HQ only) ═══

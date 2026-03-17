@@ -265,7 +265,7 @@ const Scr4 = (() => {
         dashboard_group: document.getElementById('ch-group')?.value || 'other',
         finance_sub_category: document.getElementById('ch-fincat')?.value || key,
       });
-      ch.channels.push(data);
+      ch.masters.push(data);
       App.closeDialog();
       fillChannels();
       App.toast('สร้าง Channel สำเร็จ', 'success');

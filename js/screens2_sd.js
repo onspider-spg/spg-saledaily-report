@@ -22,8 +22,10 @@ const Scr2 = (() => {
     </div>`;
   }
 
+  let _vnClickHandler = null;
   function vnShow(id) { vnFilter(id); document.getElementById(id + '-list').style.display = 'block';
-    setTimeout(() => { document.addEventListener('click', function _c(ev) { if (!ev.target.closest('.vendor-wrap')) { const el = document.getElementById(id + '-list'); if (el) el.style.display = 'none'; document.removeEventListener('click', _c); } }); }, 50); }
+    if (_vnClickHandler) { document.removeEventListener('click', _vnClickHandler); _vnClickHandler = null; }
+    setTimeout(() => { _vnClickHandler = function(ev) { if (!ev.target.closest('.vendor-wrap')) { const el = document.getElementById(id + '-list'); if (el) el.style.display = 'none'; document.removeEventListener('click', _vnClickHandler); _vnClickHandler = null; } }; document.addEventListener('click', _vnClickHandler); }, 50); }
 
   function vnFilter(id) {
     const q = (document.getElementById(id)?.value || '').toLowerCase();
@@ -415,6 +417,14 @@ const Scr2 = (() => {
   }
 
   async function s2Save() {
+    const vendorName = (document.getElementById('s2f-vendor')?.value || '').trim();
+    const docNumber = (document.getElementById('s2f-doc')?.value || '').trim();
+    const desc = (document.getElementById('s2f-desc')?.value || '').trim();
+    const amt = document.getElementById('s2f-amt')?.value;
+    if (!vendorName) return App.toast('กรุณาเลือก Vendor', 'error');
+    if (!docNumber) return App.toast('กรุณาใส่ Doc Number', 'error');
+    if (!desc) return App.toast('กรุณาใส่ Description', 'error');
+    if (!amt || parseFloat(amt) <= 0) return App.toast('กรุณาใส่ Amount', 'error');
     const btn = document.getElementById('s2f-save'); if (btn) btn.disabled = true;
     try {
       await API.saveExpense({
@@ -606,7 +616,7 @@ const Scr2 = (() => {
   async function loadS3Form(params) {
     if (!params?.id) return;
     const inv = s3.invoices.find(x => x.id === params.id);
-    if (!inv) return;
+    if (!inv) { App.toast('ไม่พบ Invoice — กรุณาโหลดใหม่', 'error'); App.go('invoice'); return; }
     s3f.id = inv.id;
     s3f.photoUrl = inv.photo_url || '';
     s3f.extraPhotos = inv.extra_photos || [];
@@ -673,7 +683,15 @@ const Scr2 = (() => {
     const fields = document.getElementById('s3f-cn-fields');
     if (fields) fields.style.display = show ? '' : 'none';
     s3f.hasCN = show;
-    if (show) s3fSyncCnNo();
+    if (show) { s3fSyncCnNo(); }
+    else {
+      const cnNo = document.getElementById('s3f-cn-no'); if (cnNo) cnNo.value = '';
+      const cnAmt = document.getElementById('s3f-cn-amt'); if (cnAmt) cnAmt.value = '';
+      const crGst = document.getElementById('s3f-cr-gst'); if (crGst) crGst.value = '';
+      const crReason = document.getElementById('s3f-cr-reason'); if (crReason) crReason.value = '';
+      const crDesc = document.getElementById('s3f-cr-desc'); if (crDesc) crDesc.value = '';
+      const crTotal = document.getElementById('s3f-cr-total'); if (crTotal) crTotal.value = '';
+    }
     s3fCalc();
   }
 
@@ -735,6 +753,14 @@ const Scr2 = (() => {
         if (syncChk?.is_synced) { App.toast('วันนี้ถูก Sync แล้ว แก้ไขไม่ได้', 'error'); return; }
       } catch {}
     }
+    const vendorName = (document.getElementById('s3f-vendor')?.value || '').trim();
+    if (!vendorName) return App.toast('กรุณาเลือก Vendor', 'error');
+    const invNo = (document.getElementById('s3f-no')?.value || '').trim();
+    if (!invNo) return App.toast('กรุณาใส่ Invoice No', 'error');
+    const descVal = (document.getElementById('s3f-desc')?.value || '').trim();
+    if (!descVal) return App.toast('กรุณาใส่ Description', 'error');
+    const amtVal = document.getElementById('s3f-amt')?.value;
+    if (!amtVal || parseFloat(amtVal) <= 0) return App.toast('กรุณาใส่ Amount', 'error');
     if (!s3f.photoUrl) return App.toast('กรุณาถ่ายรูป Invoice', 'error');
     const issueDate = document.getElementById('s3f-date')?.value;
     const dueDate = document.getElementById('s3f-due')?.value;

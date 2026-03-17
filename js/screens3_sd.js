@@ -69,8 +69,6 @@ const Scr3 = (() => {
     if (reset) { s5.records = []; s5.offset = 0; }
     if (_busy.s5) return; _busy.s5 = true;
     try {
-      s5.dateFrom = document.getElementById('s5-from')?.value || s5.dateFrom;
-      s5.dateTo = document.getElementById('s5-to')?.value || s5.dateTo;
       const data = await API.getSaleHistory({ date_from: s5.dateFrom, date_to: s5.dateTo, limit: 10, offset: s5.offset });
       const newRecs = data.records || [];
       s5.records = s5.offset === 0 ? newRecs : [...s5.records, ...newRecs];
@@ -151,8 +149,6 @@ const Scr3 = (() => {
     if (reset) { s6.expenses = []; s6.invoices = []; s6.offset = 0; }
     if (_busy.s6) return; _busy.s6 = true;
     try {
-      s6.dateFrom = document.getElementById('s6-from')?.value || s6.dateFrom;
-      s6.dateTo = document.getElementById('s6-to')?.value || s6.dateTo;
       const data = await API.getExpenseHistory({ date_from: s6.dateFrom, date_to: s6.dateTo, limit: 10, offset: s6.offset, filter: s6.filter });
       if (s6.offset === 0) { s6.expenses = data.expenses || []; s6.invoices = data.invoices || []; }
       else { s6.expenses = [...s6.expenses, ...(data.expenses || [])]; s6.invoices = [...s6.invoices, ...(data.invoices || [])]; }
@@ -315,7 +311,23 @@ const Scr3 = (() => {
     loadS8();
   }
 
+  function collectS8Overview() {
+    if (!s8.report) s8.report = {};
+    const note = document.getElementById('s8-note');
+    if (note) s8.report.overview_note = note.value;
+    ['morning', 'midday', 'afternoon', 'evening', 'night'].forEach(p => {
+      const el = document.getElementById('s8-cust-' + p);
+      if (el) s8.report['customer_' + p] = el.value;
+    });
+    if (_s8Weather) s8.report.weather = _s8Weather;
+    if (_s8Traffic) s8.report.traffic = _s8Traffic;
+    if (_s8PosStatus) s8.report.pos_status = _s8PosStatus;
+    if (_s8Waste !== null && _s8Waste !== undefined) s8.report.has_waste = _s8Waste;
+  }
+
   function s8SetTab(tab, el) {
+    // Collect current tab values before switching
+    if (s8.tab === 'overview') collectS8Overview();
     s8.tab = tab;
     // Sync both tab bars
     ['s8-tabs-top', 's8-tabs-bottom'].forEach(id => {

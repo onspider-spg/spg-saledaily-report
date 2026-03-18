@@ -44,7 +44,7 @@ const API = (() => {
     return s;
   }
   function getSession() { try { return JSON.parse(localStorage.getItem(SK)) || null; } catch { return null; } }
-  function clearSession() { localStorage.removeItem(SK); }
+  function clearSession() { localStorage.removeItem(SK); localStorage.removeItem(TK); }
 
   function hasPermission(key) { return getSession()?.permissions?.[key] === true; }
   function isHQ() { const s = getSession(); return s?.store_id === 'HQ' || (s?.tier_level || 99) <= 2; }
@@ -59,10 +59,18 @@ const API = (() => {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data), signal: ctrl.signal,
       });
-      const json = await resp.json();
+      // Handle non-JSON responses (e.g. 401 from edge function boot)
+      let json;
+      try { json = await resp.json(); } catch {
+        if (resp.status === 401) { clearSession(); location.href = LOGOUT_URL; return; }
+        const e = new Error('Server error (' + resp.status + ')'); e.code = 'HTTP_' + resp.status; throw e;
+      }
       if (!json.success) {
-        if (json.error?.code === 'INVALID_SESSION') { clearSession(); location.href = LOGOUT_URL; }
-        const e = new Error(json.error?.message || 'Unknown error'); e.code = json.error?.code; throw e;
+        const code = json.error?.code;
+        if (code === 'INVALID_SESSION' || code === 'NO_TOKEN' || code === 'ACCOUNT_DISABLED') {
+          clearSession(); location.href = LOGOUT_URL; return;
+        }
+        const e = new Error(json.error?.message || 'Unknown error'); e.code = code; throw e;
       }
       return json.data;
     } finally { clearTimeout(timer); }

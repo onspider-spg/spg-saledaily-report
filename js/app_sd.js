@@ -403,7 +403,14 @@ const App = (() => {
     } catch (err) {
       console.error('Init failed:', err);
       if (err.code === 'NO_ACCESS') go('no-access');
-      else { toast('เชื่อมต่อไม่ได้ กรุณาลองใหม่', 'error'); go('no-access'); }
+      else if (err.code === 'INVALID_SESSION' || err.code === 'NO_TOKEN' || err.code === 'ACCOUNT_DISABLED') {
+        // Session expired or invalid — redirect to login
+        API.logout();
+      } else {
+        // Network or unknown error — show no-access with retry
+        toast('เชื่อมต่อไม่ได้ กรุณาลองใหม่', 'error');
+        go('no-access');
+      }
     }
   }
 

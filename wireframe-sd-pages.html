@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD Module — Multi-Page Wireframe v3</title>
+<style>
+:root {
+  --bg:#fff; --bg2:#fafafa; --bg3:#f3f4f6;
+  --bd:#e5e7eb; --bd2:#f0f0f0;
+  --t1:#111; --t2:#555; --t3:#999; --t4:#bbb;
+  --acc:#7c3aed; --acc2:#ede9fe; --acc3:#6d28d9;
+  --g:#059669; --gbg:#ecfdf5;
+  --r:#dc2626; --rbg:#fef2f2;
+  --o:#d97706; --obg:#fffbeb;
+  --b:#2563eb; --bbg:#dbeafe;
+  --gold:#d4960a; --gold-bg:rgba(212,150,10,.06); --gold-bg2:rgba(212,150,10,.12);
+  --rd:8px; --rd2:6px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);font-size:13px;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased}
+
+/* ═══ SHELL ═══ */
+.shell{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+.shell-body{display:flex;flex:1;overflow:hidden}
+.shell-main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f5f5f5}
+
+/* ═══ TOPBAR ═══ */
+.topbar{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 24px;border-bottom:1px solid var(--bd2);background:var(--bg);flex-shrink:0}
+.topbar-logo{font-size:13px;font-weight:800;color:var(--acc);letter-spacing:-.3px;cursor:pointer}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.topbar-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);font-size:12px}
+.topbar-icon:hover{background:var(--bg3)}
+.avatar{width:24px;height:24px;border-radius:50%;background:var(--acc2);color:var(--acc);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.topbar-name{font-size:12px;font-weight:600;color:var(--t2);cursor:pointer}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{width:180px;background:var(--bg);border-right:1px solid var(--bd2);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding-top:6px}
+.sb-item{display:flex;align-items:center;gap:7px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;border-radius:6px;margin:1px 6px;white-space:nowrap}
+.sb-item:hover{background:var(--bg3);color:var(--t1)}
+.sb-item.active{color:var(--acc);background:var(--acc2)}
+.sb-item .ico{width:16px;min-width:16px;text-align:center;font-size:12px;color:var(--t4)}
+.sb-item.active .ico{color:var(--acc)}
+.sb-sec{font-size:9px;font-weight:700;color:var(--t4);text-transform:uppercase;padding:14px 16px 4px;letter-spacing:.5px}
+.sb-div{height:1px;background:var(--bd2);margin:6px 14px}
+.sb-footer{margin-top:auto;padding:12px 14px;border-top:1px solid var(--bd2);font-size:11px}
+.sb-footer a{display:block;padding:4px 0;color:var(--t3);text-decoration:none;cursor:pointer}
+.sb-footer a:hover{color:var(--t1)}
+.sb-footer .danger{color:var(--r)}
+
+/* ═══ CONTENT AREA ═══ */
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 20px;border-bottom:1px solid var(--bd2);background:var(--bg);flex-shrink:0}
+.toolbar-back{background:none;border:none;font-size:16px;cursor:pointer;color:var(--t2);padding:0 4px}
+.toolbar-title{font-size:14px;font-weight:700}
+.content{flex:1;overflow-y:auto;padding:16px 20px 40px}
+
+/* ═══ PAGE TABS (to simulate multi-page) ═══ */
+.page-tabs{display:flex;gap:0;border-bottom:2px solid var(--bd);margin-bottom:16px;background:var(--bg);padding:0 20px;flex-shrink:0}
+.page-tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.page-tab:hover{color:var(--t1)}
+.page-tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.page-section{display:none}
+.page-section.active{display:block}
+
+/* ═══ COMPONENTS ═══ */
+.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:8px 14px;background:var(--bg);border-radius:var(--rd);border:1px solid var(--bd2)}
+.month-nav{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.month-btn{width:24px;height:24px;border-radius:50%;border:1px solid var(--bd);background:var(--bg);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;color:var(--t2)}
+.pill-group{display:flex;gap:3px}
+.pill{padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1px solid var(--bd);background:var(--bg);color:var(--t3);cursor:pointer}
+.pill.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.pill.gold{background:var(--gold);color:#fff;border-color:var(--gold)}
+.filter-sep{width:1px;height:20px;background:var(--bd)}
+
+.kpi-row{display:grid;gap:10px;margin-bottom:14px}
+.kpi-4{grid-template-columns:repeat(4,1fr)}
+.kpi-3{grid-template-columns:repeat(3,1fr)}
+.kpi-2{grid-template-columns:repeat(2,1fr)}
+.kpi{background:var(--bg);border-radius:var(--rd);padding:14px 16px;border:1px solid var(--bd2);position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi.gold::after{background:var(--gold)} .kpi.red::after{background:var(--r)} .kpi.green::after{background:var(--g)} .kpi.blue::after{background:var(--b)}
+.kpi-label{font-size:10px;color:var(--t3);margin-bottom:3px}
+.kpi-val{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.kpi-sub{font-size:10px;margin-top:4px;font-weight:600}
+.up{color:var(--g)} .dn{color:var(--r)}
+
+.card{background:var(--bg);border-radius:var(--rd);border:1px solid var(--bd2);padding:16px;margin-bottom:12px}
+.card-hd{font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.card-hd .mute{font-size:10px;color:var(--t4);font-weight:400;margin-left:auto}
+
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{text-align:left;font-weight:700;color:var(--t4);font-size:9px;padding:5px 6px;border-bottom:2px solid var(--bd);text-transform:uppercase;letter-spacing:.4px}
+.tbl td{padding:7px 6px;border-bottom:1px solid var(--bd2)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .r{text-align:right;font-variant-numeric:tabular-nums} .tbl .b{font-weight:700}
+.tbl tr.clickable{cursor:pointer} .tbl tr.clickable:hover{background:var(--bg3)}
+
+.tag{display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px}
+.tg{background:var(--gbg);color:var(--g)} .tr{background:var(--rbg);color:var(--r)} .to{background:var(--obg);color:var(--o)} .tb{background:var(--bbg);color:var(--b)} .tgray{background:var(--bg3);color:var(--t3)} .tgold{background:var(--gold-bg2);color:var(--gold)}
+
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.bar-lbl{font-size:10px;min-width:80px;font-weight:600}
+.bar-track{flex:1;height:14px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px}
+.bar-val{font-size:10px;font-weight:700;min-width:34px;text-align:right}
+
+.prog{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden}
+.prog-fill{height:100%;border-radius:5px}
+
+.insight{padding:10px 14px;border-radius:var(--rd2);font-size:11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
+.insight-b{background:var(--bbg);color:var(--b)} .insight-g{background:var(--gbg);color:var(--g)} .insight-o{background:var(--obg);color:var(--o)} .insight-r{background:var(--rbg);color:var(--r)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+.alert-item{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd2);font-size:11px;align-items:flex-start}
+.alert-item:last-child{border-bottom:none}
+
+/* Detail popup overlay */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200;display:flex;align-items:center;justify-content:center}
+.popup-sheet{background:var(--bg);border-radius:12px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.popup-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.popup-title{font-size:15px;font-weight:700}
+.popup-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--t3);padding:4px}
+
+.hm-grid{display:grid;grid-template-columns:90px repeat(7,1fr);gap:2px;font-size:9px}
+.hm-hd{font-weight:700;color:var(--t4);text-align:center;padding:3px 2px}
+.hm-store{font-weight:600;padding:4px 4px;display:flex;align-items:center}
+.hm-cell{border-radius:3px;text-align:center;padding:4px 2px;font-weight:600;font-size:8px;display:flex;align-items:center;justify-content:center}
+
+.inc-row{display:flex;align-items:center;gap:8px;padding:5px 0}
+.inc-icon{font-size:14px} .inc-name{font-size:11px;flex:1} .inc-count{font-size:13px;font-weight:800;min-width:24px;text-align:center}
+.inc-bar{width:60px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.inc-bar-fill{height:100%;border-radius:3px}
+
+.btn{padding:6px 14px;border-radius:var(--rd2);font-size:11px;font-weight:600;border:1px solid var(--bd);cursor:pointer;background:var(--bg)}
+.btn:hover{background:var(--bg3)}
+.btn-primary{background:var(--acc);color:#fff;border-color:var(--acc)} .btn-primary:hover{background:var(--acc3)}
+.btn-gold{background:var(--gold);color:#fff;border-color:var(--gold)}
+.btn-outline{background:transparent}
+.btn-sm{padding:4px 10px;font-size:10px}
+.btn-danger{color:var(--r);border-color:var(--r)} .btn-danger:hover{background:var(--rbg)}
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .kpi-4,.kpi-3{grid-template-columns:1fr 1fr}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .hm-grid{font-size:8px}
+  .content{padding:12px 14px 40px}
+  .page-tabs{overflow-x:auto}
+}
+
+.wm{position:fixed;bottom:10px;right:14px;font-size:8px;color:var(--t4);background:rgba(255,255,255,.85);padding:3px 10px;border-radius:10px;z-index:100}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ═══ TOPBAR ═══ -->
+  <div class="topbar">
+    <div class="topbar-logo">SPG Sale Daily Report</div>
+    <div class="topbar-right">
+      <div class="topbar-icon" title="Refresh">↻</div>
+      <div class="topbar-icon" title="Settings">⚙</div>
+      <div class="avatar">ON</div>
+      <div class="topbar-name">Onnie</div>
+    </div>
+  </div>
+
+  <div class="shell-body">
+    <!-- ═══ SIDEBAR ═══ -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sb-item active" data-page="dashboard" onclick="goPage('dashboard')">
+        <span class="ico">◇</span> Dashboard
+      </div>
+      <div class="sb-div"></div>
+      <div class="sb-sec">Input</div>
+      <div class="sb-item" data-page="none"><span class="ico">✎</span> Daily Sale</div>
+      <div class="sb-item" data-page="none"><span class="ico">✎</span> Expense</div>
+      <div class="sb-item" data-page="none"><span class="ico">✎</span> Invoice</div>
+      <div class="sb-item" data-page="none"><span class="ico">✎</span> Cash On Hand</div>
+      <div class="sb-sec">History</div>
+      <div class="sb-item" data-page="none"><span class="ico">◷</span> Sale History</div>
+      <div class="sb-item" data-page="none"><span class="ico">◷</span> Expense History</div>
+      <div class="sb-sec">Report</div>
+      <div class="sb-item" data-page="none"><span class="ico">☰</span> Daily Report</div>
+      <div class="sb-item" data-page="none"><span class="ico">☰</span> Daily Hub</div>
+      <div class="sb-item" data-page="none"><span class="ico">☰</span> Tasks</div>
+      <div class="sb-sec">Admin</div>
+      <div class="sb-item" data-page="sync-review" onclick="goPage('sync-review')"><span class="ico">⚙</span> Sync Review</div>
+      <div class="sb-item" data-page="store-perf" onclick="goPage('store-perf')"><span class="ico">⚙</span> Store Performance</div>
+      <div class="sb-item" data-page="ops-health" onclick="goPage('ops-health')"><span class="ico">⚙</span> Ops Health</div>
+      <div class="sb-item" data-page="none"><span class="ico">⚙</span> Channels</div>
+      <div class="sb-item" data-page="none"><span class="ico">⚙</span> Vendors</div>
+      <div class="sb-item" data-page="none"><span class="ico">⚙</span> Config</div>
+      <div class="sb-item" data-page="none"><span class="ico">⚙</span> User Access</div>
+      <div class="sb-item" data-page="none"><span class="ico">⚙</span> Audit</div>
+      <div class="sb-footer">
+        <a>← Back to Home</a>
+        <a class="danger">→ Logout</a>
+      </div>
+    </nav>
+
+    <!-- ═══ MAIN ═══ -->
+    <div class="shell-main">
+
+      <!-- ════════════════════════════════════════ -->
+      <!-- PAGE: DASHBOARD                          -->
+      <!-- ════════════════════════════════════════ -->
+      <div id="pg-dashboard" class="page-section active">
+        <div class="toolbar"><div class="toolbar-title">Dashboard</div></div>
+        <div class="content">
+          <div style="margin-bottom:14px">
+            <div style="font-size:15px;font-weight:700">Welcome, Onnie</div>
+            <div style="font-size:11px;color:var(--t3)">T1 · Admin · HQ</div>
+          </div>
+          <div class="filter-bar">
+            <div class="pill-group">
+              <div class="pill gold">All Stores</div>
+              <div class="pill">Mango Coco</div>
+              <div class="pill">Issho Cafe</div>
+              <div class="pill">Golden Brown</div>
+            </div>
+          </div>
+
+          <div class="kpi-row kpi-4">
+            <div class="kpi gold"><div class="kpi-label">Total Today</div><div class="kpi-val" style="color:var(--gold)">$14,625</div><div class="kpi-sub up">▲ vs yesterday</div></div>
+            <div class="kpi blue"><div class="kpi-label">Month Total</div><div class="kpi-val">$148.6k</div><div class="kpi-sub" style="color:var(--t3)">15 days</div></div>
+            <div class="kpi green"><div class="kpi-label">Avg / Day</div><div class="kpi-val" style="color:var(--g)">$9.9k</div><div class="kpi-sub" style="color:var(--t3)"></div></div>
+            <div class="kpi red"><div class="kpi-label">Pending Sync</div><div class="kpi-val" style="color:var(--o)">3</div><div class="kpi-sub" style="color:var(--t3)">days</div></div>
+          </div>
+
+          <!-- Weekly Chart placeholder -->
+          <div class="card">
+            <div class="card-hd">This Week vs Last Week</div>
+            <svg viewBox="0 0 500 100" style="width:100%;height:auto">
+              <polyline points="30,70 100,55 170,60 240,45 310,50 380,40 450,35" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+              <polyline points="30,75 100,68 170,72 240,60 310,65 380,55 450,50" fill="none" stroke="#86efac" stroke-width="1.5" stroke-dasharray="4,3"/>
+              <polyline points="30,88 100,85 170,90 240,82 310,87 380,84 450,80" fill="none" stroke="#dc2626" stroke-width="1.5" opacity=".5"/>
+            </svg>
+            <div style="display:flex;gap:14px;font-size:9px"><span style="color:var(--g)">━ Revenue TW</span><span style="color:#86efac">┄ Revenue LW</span><span style="color:var(--r);opacity:.5">━ Expense TW</span></div>
+          </div>
+
+          <!-- Quick links -->
+          <div style="font-size:11px;font-weight:700;color:var(--t2);margin:16px 0 8px">Quick Reports</div>
+          <div class="grid-3">
+            <div class="card" style="cursor:pointer;text-align:center;padding:20px" onclick="goPage('store-perf')">
+              <div style="font-size:24px;margin-bottom:6px">📊</div>
+              <div style="font-size:12px;font-weight:700">Store Performance</div>
+              <div style="font-size:10px;color:var(--t3)">Revenue · Channel · Weather</div>
+            </div>
+            <div class="card" style="cursor:pointer;text-align:center;padding:20px" onclick="goPage('ops-health')">
+              <div style="font-size:24px;margin-bottom:6px">🏥</div>
+              <div style="font-size:12px;font-weight:700">Ops Health</div>
+              <div style="font-size:10px;color:var(--t3)">Incidents · Tasks · Compliance</div>
+            </div>
+            <div class="card" style="cursor:pointer;text-align:center;padding:20px" onclick="goPage('sync-review')">
+              <div style="font-size:24px;margin-bottom:6px">🔄</div>
+              <div style="font-size:12px;font-weight:700">Sync Review</div>
+              <div style="font-size:10px;color:var(--t3)">Review · Lock · Bridge</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ════════════════════════════════════════ -->
+      <!-- PAGE: STORE PERFORMANCE                  -->
+      <!-- ════════════════════════════════════════ -->
+      <div id="pg-store-perf" class="page-section">
+        <div class="toolbar">
+          <button class="toolbar-back" onclick="goPage('dashboard')">←</button>
+          <div class="toolbar-title">Store Performance</div>
+        </div>
+        <div class="page-tabs">
+          <div class="page-tab on" onclick="subTab(this,'sp-revenue')">Revenue</div>
+          <div class="page-tab" onclick="subTab(this,'sp-channel')">Channel Mix</div>
+          <div class="page-tab" onclick="subTab(this,'sp-weather')">Weather Impact</div>
+          <div class="page-tab" onclick="subTab(this,'sp-cash')">Cash Accuracy</div>
+          <div class="page-tab" onclick="subTab(this,'sp-expense')">Expense & Income</div>
+        </div>
+        <div class="content">
+          <div class="filter-bar">
+            <div class="month-nav"><button class="month-btn">‹</button><span>Mar 2026</span><button class="month-btn">›</button></div>
+            <div class="filter-sep"></div>
+            <div class="pill-group">
+              <div class="pill gold">All Stores</div><div class="pill">Mango Coco</div><div class="pill">Issho Cafe</div>
+            </div>
+            <div class="filter-sep"></div>
+            <div class="pill-group"><div class="pill on">All Brands</div><div class="pill">Siam Palette</div><div class="pill">BC Bakery</div></div>
+          </div>
+
+          <!-- TAB: Revenue -->
+          <div id="sp-revenue" class="sub-tab active">
+            <div class="kpi-row kpi-4">
+              <div class="kpi gold"><div class="kpi-label">Total Revenue</div><div class="kpi-val" style="color:var(--gold)">$148.6k</div><div class="kpi-sub up">▲ +8% vs Feb</div></div>
+              <div class="kpi red"><div class="kpi-label">Total Expense</div><div class="kpi-val" style="color:var(--r)">$420</div><div class="kpi-sub dn">▲ +2%</div></div>
+              <div class="kpi green"><div class="kpi-label">Net Revenue</div><div class="kpi-val" style="color:var(--g)">$148.2k</div><div class="kpi-sub up">▲ +8%</div></div>
+              <div class="kpi blue"><div class="kpi-label">Avg / Day</div><div class="kpi-val">$9.9k</div><div class="kpi-sub" style="color:var(--t3)">15 of 17 days</div></div>
+            </div>
+
+            <!-- Revenue Trend Chart -->
+            <div class="card">
+              <div class="card-hd">Daily Revenue Trend <span class="mute">This month vs Last month</span></div>
+              <svg viewBox="0 0 560 120" style="width:100%;height:auto">
+                <line x1="30" y1="10" x2="540" y2="10" stroke="#f0f0f0"/><line x1="30" y1="40" x2="540" y2="40" stroke="#f0f0f0"/><line x1="30" y1="70" x2="540" y2="70" stroke="#f0f0f0"/><line x1="30" y1="100" x2="540" y2="100" stroke="#f0f0f0"/>
+                <polyline points="45,55 78,42 111,50 144,35 177,48 210,30 243,40 276,25 309,32 342,20 375,35 408,30 441,38 474,25 507,22" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="45,68 78,62 111,72 144,65 177,76 210,70 243,80 276,74 309,62 342,58 375,68 408,72 441,65 474,72" fill="none" stroke="#86efac" stroke-width="1.5" stroke-dasharray="4,3"/>
+                <circle cx="507" cy="22" r="3.5" fill="#059669"/>
+              </svg>
+              <div style="display:flex;gap:14px;font-size:9px"><span style="color:var(--g)">━ Mar 2026</span><span style="color:#86efac">┄ Feb 2026</span></div>
+            </div>
+
+            <!-- Store Ranking -->
+            <div class="card">
+              <div class="card-hd">Store Ranking <span class="mute">Click row to drill down</span></div>
+              <table class="tbl">
+                <thead><tr><th>#</th><th>Store</th><th>Brand</th><th class="r">Revenue</th><th class="r">Expense</th><th class="r">Net</th><th class="r">Avg/Day</th><th class="r">Days</th><th>Trend</th></tr></thead>
+                <tbody>
+                  <tr class="clickable"><td class="b" style="color:var(--gold)">1</td><td class="b">Mango Coco</td><td><span class="tag tgold">Siam Palette</span></td><td class="r b" style="color:var(--gold)">$142.2k</td><td class="r" style="color:var(--r)">$420</td><td class="r b" style="color:var(--g)">$141.8k</td><td class="r">$10.2k</td><td class="r">14</td><td><span class="tag tg">▲ +5%</span></td></tr>
+                  <tr class="clickable"><td class="b" style="color:var(--t3)">2</td><td class="b">Issho Cafe</td><td><span class="tag tb">BC Bakery</span></td><td class="r b" style="color:var(--gold)">$6.3k</td><td class="r" style="color:var(--r)">$0</td><td class="r b" style="color:var(--g)">$6.3k</td><td class="r">$633</td><td class="r">1</td><td><span class="tag tgray">New</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Day of Week -->
+            <div class="card">
+              <div class="card-hd">Day-of-Week Pattern <span class="mute">Avg daily revenue</span></div>
+              <div style="display:flex;align-items:flex-end;gap:6px;height:90px;padding:0 4px">
+                <div style="flex:1;text-align:center"><div style="background:var(--g);opacity:.6;height:50px;border-radius:4px 4px 0 0;width:80%;margin:0 auto"></div><div style="font-size:8px;color:var(--t3);margin-top:3px">Mon</div><div style="font-size:8px;font-weight:700">$8.2k</div></div>
+                <div style="flex:1;text-align:center"><div style="background:var(--g);opacity:.7;height:60px;border-radius:4px 4px 0 0;width:80%;margin:0 auto"></div><div style="font-size:8px;color:var(--t3);margin-top:3px">Tue</div><div style="font-size:8px;font-weight:700">$9.8k</div></div>
+                <div style="flex:1;text-align:center"><div style="background:var(--g);opacity:.7;height:65px;border-radius:4px 4px 0 0;width:80%;margin:0 auto"></div><div style="font-size:8px;color:var(--t3);margin-top:3px">Wed</div><div style="font-size:8px;font-weight:700">$10.5k</div></div>
+                <div style="flex:1;text-align:center"><div style="background:var(--g);opacity:.8;height:72px;border-radius:4px 4px 0 0;width:80%;margin:0 auto"></div><div style="font-size:8px;color:var(--t3);margin-top:3px">Thu</div><div style="font-size:8px;font-weight:700">$11.8k</div></div>
+                <div style="flex:1;text-align:center"><div style="background:var(--gold);height:85px;border-radius:4px 4px 0 0;width:80%;margin:0 auto"></div><div style="font-size:8px;color:var(--t3);margin-top:3px">Fri</div><div style="font-size:8px;font-weight:700;color:var(--gold)">$14.2k</div></div>
+                <div style="flex:1;text-align:center"><div style="background:var(--gold);height:90px;border-radius:4px 4px 0 0;width:80%;margin:0 auto"></div><div style="font-size:8px;color:var(--t3);margin-top:3px">Sat</div><div style="font-size:8px;font-weight:700;color:var(--gold)">$15.1k</div></div>
+                <div style="flex:1;text-align:center"><div style="background:var(--gold);opacity:.9;height:78px;border-radius:4px 4px 0 0;width:80%;margin:0 auto"></div><div style="font-size:8px;color:var(--t3);margin-top:3px">Sun</div><div style="font-size:8px;font-weight:700;color:var(--gold)">$12.8k</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: Channel Mix -->
+          <div id="sp-channel" class="sub-tab">
+            <div class="card">
+              <div class="card-hd">Channel Mix — All Stores</div>
+              <div class="bar-row"><div class="bar-lbl">Card (Eftpos)</div><div class="bar-track"><div class="bar-fill" style="width:65%;background:var(--b)"></div></div><div class="bar-val" style="color:var(--b)">65%</div></div>
+              <div class="bar-row"><div class="bar-lbl">Cash</div><div class="bar-track"><div class="bar-fill" style="width:25%;background:var(--g)"></div></div><div class="bar-val" style="color:var(--g)">25%</div></div>
+              <div class="bar-row"><div class="bar-lbl">Delivery</div><div class="bar-track"><div class="bar-fill" style="width:8%;background:var(--o)"></div></div><div class="bar-val" style="color:var(--o)">8%</div></div>
+              <div class="bar-row"><div class="bar-lbl">Other</div><div class="bar-track"><div class="bar-fill" style="width:2%;background:var(--t4)"></div></div><div class="bar-val">2%</div></div>
+              <div class="insight insight-b"><span>💡</span><span>Card dominates 65%. Delivery flat at 8% — push delivery promo on rain days.</span></div>
+            </div>
+            <div class="card">
+              <div class="card-hd">Channel Mix per Store</div>
+              <table class="tbl">
+                <thead><tr><th>Store</th><th class="r">Card</th><th class="r">Cash</th><th class="r">Delivery</th><th class="r">Other</th><th class="r">Total</th></tr></thead>
+                <tbody>
+                  <tr><td class="b">Mango Coco</td><td class="r">$92.4k</td><td class="r">$35.6k</td><td class="r">$11.4k</td><td class="r">$2.8k</td><td class="r b" style="color:var(--gold)">$142.2k</td></tr>
+                  <tr><td class="b">Issho Cafe</td><td class="r">$380</td><td class="r">$253</td><td class="r">$0</td><td class="r">$0</td><td class="r b" style="color:var(--gold)">$633</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB: Weather Impact -->
+          <div id="sp-weather" class="sub-tab">
+            <div class="card">
+              <div class="card-hd">Weather x Revenue Correlation</div>
+              <table class="tbl">
+                <thead><tr><th>Weather</th><th class="r">Days</th><th class="r">Avg Sales</th><th>Impact vs Sunny</th></tr></thead>
+                <tbody>
+                  <tr><td>☀️ Sunny</td><td class="r b">8</td><td class="r b gold">$11,200</td><td><div style="display:flex;align-items:center;gap:4px"><div style="width:80px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="width:100%;height:100%;background:var(--g);border-radius:3px"></div></div><span class="tag tg">baseline</span></div></td></tr>
+                  <tr><td>☁️ Cloudy</td><td class="r b">4</td><td class="r b">$9,900</td><td><div style="display:flex;align-items:center;gap:4px"><div style="width:80px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="width:88%;height:100%;background:var(--o);border-radius:3px;opacity:.7"></div></div><span class="tag to">-12%</span></div></td></tr>
+                  <tr><td>🌧️ Rain</td><td class="r b">2</td><td class="r b">$7,500</td><td><div style="display:flex;align-items:center;gap:4px"><div style="width:80px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="width:67%;height:100%;background:var(--r);border-radius:3px;opacity:.7"></div></div><span class="tag tr">-33%</span></div></td></tr>
+                  <tr><td>⛈️ Heavy Rain</td><td class="r b">1</td><td class="r b red">$5,100</td><td><div style="display:flex;align-items:center;gap:4px"><div style="width:80px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="width:46%;height:100%;background:var(--r);border-radius:3px"></div></div><span class="tag tr">-54%</span></div></td></tr>
+                </tbody>
+              </table>
+              <div class="insight insight-b"><span>💡</span><span>Heavy rain days = revenue drops ~54%. Consider delivery promotions when rain is forecast.</span></div>
+            </div>
+          </div>
+
+          <!-- TAB: Cash Accuracy -->
+          <div id="sp-cash" class="sub-tab">
+            <div class="kpi-row kpi-3">
+              <div class="kpi green"><div class="kpi-label">Cash Match Rate</div><div class="kpi-val" style="color:var(--g)">87%</div><div class="kpi-sub" style="color:var(--t3)">13 / 15 days</div></div>
+              <div class="kpi blue"><div class="kpi-label">Avg Variance</div><div class="kpi-val">$3.20</div></div>
+              <div class="kpi red"><div class="kpi-label">Worst Mismatch</div><div class="kpi-val" style="color:var(--r)">-$18.00</div><div class="kpi-sub" style="color:var(--t3)">Mango Coco · 8 Mar</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hd">Cash Accuracy per Store</div>
+              <table class="tbl">
+                <thead><tr><th>Store</th><th class="r">Match Rate</th><th class="r">Avg Var.</th><th class="r">Worst</th><th class="r">Counted</th></tr></thead>
+                <tbody>
+                  <tr><td class="b">Mango Coco</td><td class="r"><span class="tag to">79%</span></td><td class="r">$4.20</td><td class="r red b">-$18.00</td><td class="r">14/14</td></tr>
+                  <tr><td class="b">Issho Cafe</td><td class="r"><span class="tag tg">100%</span></td><td class="r">$0.00</td><td class="r">—</td><td class="r">1/1</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB: Expense & Income -->
+          <div id="sp-expense" class="sub-tab">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-hd">Income by Channel <span class="mute">This month total</span></div>
+                <table class="tbl">
+                  <thead><tr><th>Channel</th><th class="r">Amount</th><th class="r">%</th></tr></thead>
+                  <tbody>
+                    <tr><td class="b">Card (Eftpos)</td><td class="r b gold">$92.8k</td><td class="r">62%</td></tr>
+                    <tr><td class="b">Cash</td><td class="r b">$35.9k</td><td class="r">24%</td></tr>
+                    <tr><td class="b">Delivery</td><td class="r b">$11.4k</td><td class="r">8%</td></tr>
+                    <tr><td class="b">Other</td><td class="r">$8.5k</td><td class="r">6%</td></tr>
+                    <tr style="background:var(--gold-bg)"><td class="b">Total Income</td><td class="r b gold">$148.6k</td><td class="r b">100%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card">
+                <div class="card-hd">Top Vendors (Expense) <span class="mute">This month</span></div>
+                <table class="tbl">
+                  <thead><tr><th>Vendor</th><th class="r">Amount</th><th class="r">Invoices</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td class="b">IGA Supplier</td><td class="r b red">$210</td><td class="r">2</td><td><span class="tag tg">Paid</span></td></tr>
+                    <tr><td class="b">Woolworths</td><td class="r b red">$132</td><td class="r">1</td><td><span class="tag tg">Paid</span></td></tr>
+                    <tr><td class="b">ABC Packaging</td><td class="r red">$78</td><td class="r">1</td><td><span class="tag to">Unpaid</span></td></tr>
+                    <tr style="background:var(--rbg)"><td class="b">Total Expense</td><td class="r b red">$420</td><td class="r">4</td><td></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ════════════════════════════════════════ -->
+      <!-- PAGE: SYNC REVIEW (renamed from Acc Review) -->
+      <!-- ════════════════════════════════════════ -->
+      <div id="pg-sync-review" class="page-section">
+        <div class="toolbar">
+          <button class="toolbar-back" onclick="goPage('dashboard')">←</button>
+          <div class="toolbar-title">Sync Review</div>
+        </div>
+        <div class="content">
+          <div class="filter-bar">
+            <div class="month-nav"><button class="month-btn">‹</button><span>Mar 2026</span><button class="month-btn">›</button></div>
+            <div class="filter-sep"></div>
+            <div class="pill-group"><div class="pill gold">All</div><div class="pill">Mango Coco</div><div class="pill">Issho Cafe</div></div>
+          </div>
+
+          <div style="padding:8px 12px;background:var(--bbg);border-radius:var(--rd);font-size:10px;color:var(--b);margin-bottom:12px">
+            ✏️ <b>Editable</b> = ยังแก้ไขได้ · 🔒 <b>Synced</b> = ส่งไป Finance แล้ว · เกิน edit window → auto-sync · <b>Click row to review detail before sync</b>
+          </div>
+
+          <div class="kpi-row kpi-4">
+            <div class="kpi gold"><div class="kpi-label">Total Sales</div><div class="kpi-val" style="color:var(--gold)">$148.6k</div></div>
+            <div class="kpi red"><div class="kpi-label">Total Expense</div><div class="kpi-val" style="color:var(--r)">$420</div></div>
+            <div class="kpi green"><div class="kpi-label">Synced</div><div class="kpi-val" style="color:var(--g)">6</div></div>
+            <div class="kpi blue"><div class="kpi-label">Pending</div><div class="kpi-val" style="color:var(--o)">3</div></div>
+          </div>
+
+          <!-- Sync Table with clickable rows -->
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="tbl" style="margin:0">
+              <thead><tr><th style="padding-left:14px">Date</th><th>Store</th><th class="r">Sales</th><th class="r">Expense</th><th class="r">Cash Var.</th><th>Status</th><th style="width:100px"></th></tr></thead>
+              <tbody>
+                <!-- Pending rows — clickable -->
+                <tr class="clickable" onclick="showSyncDetail('17/3','Mango Coco','$14,625.28','$0.00','—','pending')" style="background:var(--gold-bg)">
+                  <td style="padding-left:14px" class="b">17/3</td>
+                  <td class="b">Mango Coco</td>
+                  <td class="r b" style="color:var(--gold)">$14,625.28</td>
+                  <td class="r">$0.00</td>
+                  <td class="r" style="color:var(--t4)">—</td>
+                  <td><span class="tag to">✏️ Editable</span></td>
+                  <td style="text-align:right;padding-right:14px"><button class="btn btn-gold btn-sm" onclick="event.stopPropagation()">🔒 Sync</button></td>
+                </tr>
+                <tr class="clickable" onclick="showSyncDetail('16/3','Mango Coco','$18,513.01','$0.00','-$3.20','pending')" style="background:var(--gold-bg)">
+                  <td style="padding-left:14px" class="b">16/3</td>
+                  <td class="b">Mango Coco</td>
+                  <td class="r b" style="color:var(--gold)">$18,513.01</td>
+                  <td class="r">$0.00</td>
+                  <td class="r" style="color:var(--r)">-$3.20</td>
+                  <td><span class="tag to">✏️ Editable</span></td>
+                  <td style="text-align:right;padding-right:14px"><button class="btn btn-gold btn-sm" onclick="event.stopPropagation()">🔒 Sync</button></td>
+                </tr>
+                <tr class="clickable" onclick="showSyncDetail('15/3','Issho Cafe','$633.00','$0.00','$0.00','pending')" style="background:var(--gold-bg)">
+                  <td style="padding-left:14px" class="b">15/3</td>
+                  <td class="b">Issho Cafe</td>
+                  <td class="r b" style="color:var(--gold)">$633.00</td>
+                  <td class="r">$0.00</td>
+                  <td class="r" style="color:var(--g)">$0.00</td>
+                  <td><span class="tag to">✏️ Editable</span></td>
+                  <td style="text-align:right;padding-right:14px"><button class="btn btn-gold btn-sm" onclick="event.stopPropagation()">🔒 Sync</button></td>
+                </tr>
+                <!-- Synced rows -->
+                <tr class="clickable" onclick="showSyncDetail('15/3','Mango Coco','$22,501.28','$0.00','$0.00','synced')" style="background:var(--bg3)">
+                  <td style="padding-left:14px">15/3</td>
+                  <td>Mango Coco</td>
+                  <td class="r" style="color:var(--gold)">$22,501.28</td>
+                  <td class="r">$0.00</td>
+                  <td class="r" style="color:var(--g)">$0.00</td>
+                  <td><span class="tag tg">🔒 Synced</span></td>
+                  <td style="text-align:right;padding-right:14px;font-size:9px;color:var(--t4)">auto</td>
+                </tr>
+                <tr class="clickable" onclick="showSyncDetail('14/3','Mango Coco','$25,254.47','$90.56','-$1.50','synced')" style="background:var(--bg3)">
+                  <td style="padding-left:14px">14/3</td>
+                  <td>Mango Coco</td>
+                  <td class="r" style="color:var(--gold)">$25,254.47</td>
+                  <td class="r" style="color:var(--r)">$90.56</td>
+                  <td class="r" style="color:var(--o)">-$1.50</td>
+                  <td><span class="tag tg">🔒 Synced</span></td>
+                  <td style="text-align:right;padding-right:14px;font-size:9px;color:var(--t4)">auto</td>
+                </tr>
+                <tr class="clickable" style="background:var(--bg3)">
+                  <td style="padding-left:14px">13/3</td>
+                  <td>Mango Coco</td>
+                  <td class="r" style="color:var(--gold)">$21,792.88</td>
+                  <td class="r" style="color:var(--r)">$132.23</td>
+                  <td class="r" style="color:var(--g)">$0.00</td>
+                  <td><span class="tag tg">🔒 Synced</span></td>
+                  <td style="text-align:right;padding-right:14px;font-size:9px;color:var(--t4)">auto</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ════════════════════════════════════════ -->
+      <!-- PAGE: OPS HEALTH                         -->
+      <!-- ════════════════════════════════════════ -->
+      <div id="pg-ops-health" class="page-section">
+        <div class="toolbar">
+          <button class="toolbar-back" onclick="goPage('dashboard')">←</button>
+          <div class="toolbar-title">Operational Health</div>
+        </div>
+        <div class="page-tabs">
+          <div class="page-tab on" onclick="subTab(this,'oh-matrix')">Store Health</div>
+          <div class="page-tab" onclick="subTab(this,'oh-incidents')">Incidents</div>
+          <div class="page-tab" onclick="subTab(this,'oh-tasks')">Tasks</div>
+          <div class="page-tab" onclick="subTab(this,'oh-waste')">Waste & Leftovers</div>
+          <div class="page-tab" onclick="subTab(this,'oh-compliance')">Compliance</div>
+        </div>
+        <div class="content">
+
+          <!-- TAB: Store Health Matrix -->
+          <div id="oh-matrix" class="sub-tab active">
+            <div class="card">
+              <div class="card-hd">Store Health Matrix <span class="mute">Last 7 days</span></div>
+              <div class="hm-grid">
+                <div class="hm-hd"></div><div class="hm-hd">Sale</div><div class="hm-hd">Expense</div><div class="hm-hd">Cash</div><div class="hm-hd">Report</div><div class="hm-hd">Incident</div><div class="hm-hd">Tasks</div><div class="hm-hd">Score</div>
+                <div class="hm-store">Mango Coco</div>
+                <div class="hm-cell" style="background:var(--gbg);color:var(--g)">7/7</div><div class="hm-cell" style="background:var(--gbg);color:var(--g)">5/7</div><div class="hm-cell" style="background:var(--obg);color:var(--o)">5/7</div><div class="hm-cell" style="background:var(--gbg);color:var(--g)">6/7</div><div class="hm-cell" style="background:var(--obg);color:var(--o)">2</div><div class="hm-cell" style="background:var(--gbg);color:var(--g)">90%</div><div class="hm-cell" style="background:var(--g);color:#fff;font-weight:800;border-radius:4px">A</div>
+                <div class="hm-store">Issho Cafe</div>
+                <div class="hm-cell" style="background:var(--obg);color:var(--o)">1/7</div><div class="hm-cell" style="background:var(--rbg);color:var(--r)">0/7</div><div class="hm-cell" style="background:var(--obg);color:var(--o)">1/7</div><div class="hm-cell" style="background:var(--rbg);color:var(--r)">0/7</div><div class="hm-cell" style="background:var(--gbg);color:var(--g)">0</div><div class="hm-cell" style="background:var(--t4);color:#fff">N/A</div><div class="hm-cell" style="background:var(--o);color:#fff;font-weight:800;border-radius:4px">C</div>
+              </div>
+              <div style="font-size:9px;color:var(--t4);margin-top:8px">A = Excellent · B = Good · C = Needs attention · D = Action required</div>
+            </div>
+          </div>
+
+          <!-- TAB: Incidents -->
+          <div id="oh-incidents" class="sub-tab">
+            <div class="card">
+              <div class="card-hd">Incident Summary <span class="mute">Last 7 days, all stores</span></div>
+              <div class="inc-row"><span class="inc-icon">🍽️</span><span class="inc-name">Food Quality</span><span class="inc-count" style="color:var(--r)">2</span><div class="inc-bar"><div class="inc-bar-fill" style="width:100%;background:var(--r)"></div></div></div>
+              <div class="inc-row"><span class="inc-icon">⏱️</span><span class="inc-name">Service Delay</span><span class="inc-count" style="color:var(--o)">1</span><div class="inc-bar"><div class="inc-bar-fill" style="width:50%;background:var(--o)"></div></div></div>
+              <div class="inc-row"><span class="inc-icon">💢</span><span class="inc-name">Complaint</span><span class="inc-count" style="color:var(--t4)">0</span><div class="inc-bar"><div class="inc-bar-fill" style="width:0%"></div></div></div>
+              <div class="inc-row"><span class="inc-icon">🗑️</span><span class="inc-name">Waste</span><span class="inc-count" style="color:var(--t4)">0</span><div class="inc-bar"><div class="inc-bar-fill" style="width:0%"></div></div></div>
+            </div>
+          </div>
+
+          <!-- TAB: Tasks -->
+          <div id="oh-tasks" class="sub-tab">
+            <div class="kpi-row kpi-4">
+              <div class="kpi green"><div class="kpi-label">Done</div><div class="kpi-val" style="color:var(--g)">8</div></div>
+              <div class="kpi blue"><div class="kpi-label">Pending</div><div class="kpi-val" style="color:var(--o)">2</div></div>
+              <div class="kpi red"><div class="kpi-label">Overdue</div><div class="kpi-val" style="color:var(--r)">0</div></div>
+              <div class="kpi gold"><div class="kpi-label">Completion</div><div class="kpi-val">80%</div></div>
+            </div>
+          </div>
+
+          <!-- TAB: Waste -->
+          <div id="oh-waste" class="sub-tab">
+            <div class="card">
+              <div class="card-hd">Top Leftovers <span class="mute">This month</span></div>
+              <table class="tbl">
+                <thead><tr><th>#</th><th>Item</th><th class="r">Total Qty</th><th class="r">Frequency</th><th>Trend</th></tr></thead>
+                <tbody>
+                  <tr><td class="b gold">1</td><td class="b">Croissant</td><td class="r">x8</td><td class="r"><span class="tag tr">5 days</span></td><td><span class="tag tr">▲ +60%</span></td></tr>
+                  <tr><td>2</td><td class="b">Banana Cake</td><td class="r">x5</td><td class="r"><span class="tag to">3 days</span></td><td><span class="tag tgray">— same</span></td></tr>
+                  <tr><td>3</td><td class="b">Sourdough</td><td class="r">x4</td><td class="r"><span class="tag to">4 days</span></td><td><span class="tag tg">▼ -20%</span></td></tr>
+                </tbody>
+              </table>
+              <div class="insight insight-o"><span>🍞</span><span>Croissant waste up 60% — reduce production or add afternoon discount.</span></div>
+            </div>
+          </div>
+
+          <!-- TAB: Compliance -->
+          <div id="oh-compliance" class="sub-tab">
+            <div class="card">
+              <div class="card-hd">Data Compliance per Store</div>
+              <table class="tbl">
+                <thead><tr><th>Store</th><th class="r">Sale</th><th class="r">Expense</th><th class="r">Cash</th><th class="r">Report</th><th class="r">Sync</th><th class="r">Overall</th></tr></thead>
+                <tbody>
+                  <tr><td class="b">Mango Coco</td><td class="r"><span class="tag tg">14/14</span></td><td class="r"><span class="tag tg">12/14</span></td><td class="r"><span class="tag to">10/14</span></td><td class="r"><span class="tag tg">12/14</span></td><td class="r"><span class="tag to">79%</span></td><td class="r b" style="font-size:14px;color:var(--g)">85%</td></tr>
+                  <tr><td class="b">Issho Cafe</td><td class="r"><span class="tag to">1/1</span></td><td class="r"><span class="tag tgray">0/1</span></td><td class="r"><span class="tag to">1/1</span></td><td class="r"><span class="tag tgray">0/1</span></td><td class="r"><span class="tag tgray">0%</span></td><td class="r b" style="font-size:14px;color:var(--o)">40%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /shell-main -->
+  </div><!-- /shell-body -->
+</div><!-- /shell -->
+
+<!-- ═══ SYNC DETAIL POPUP ═══ -->
+<div id="sync-detail-popup" style="display:none">
+  <div class="popup-overlay" onclick="closeSyncDetail()">
+    <div class="popup-sheet" onclick="event.stopPropagation()">
+      <div class="popup-header">
+        <div class="popup-title" id="sd-title">Sync Detail</div>
+        <button class="popup-close" onclick="closeSyncDetail()">✕</button>
+      </div>
+
+      <div id="sd-status-banner" style="padding:8px 12px;border-radius:var(--rd2);font-size:11px;font-weight:600;margin-bottom:14px;text-align:center"></div>
+
+      <!-- Sale Breakdown -->
+      <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px">Sale Breakdown</div>
+      <div style="background:var(--bg3);border-radius:var(--rd2);padding:12px;margin-bottom:14px;font-size:11px">
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd2)"><span>Eftpos 1</span><span class="b">$5,200.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd2)"><span>Eftpos 2</span><span class="b">$3,800.50</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd2)"><span>Cash</span><span class="b">$2,100.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd2)"><span>Uber Eats</span><span class="b">$1,524.78</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd2)"><span>DoorDash</span><span class="b">$800.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd2)"><span>Square</span><span class="b">$1,200.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;font-weight:700;font-size:12px;border-top:2px solid var(--bd)"><span>Total Sales</span><span style="color:var(--gold)">$14,625.28</span></div>
+      </div>
+
+      <!-- Cash Check -->
+      <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px">Cash Verification</div>
+      <div style="background:var(--bg3);border-radius:var(--rd2);padding:12px;margin-bottom:14px;font-size:11px">
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Expected Cash</span><span class="b">$2,100.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Actual Counted</span><span class="b">$2,096.80</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;font-weight:700;border-top:1px solid var(--bd)"><span>Difference</span><span style="color:var(--r)">-$3.20</span></div>
+        <div style="margin-top:6px;padding:6px 10px;background:var(--obg);border-radius:var(--rd2);text-align:center;font-size:11px;color:var(--o);font-weight:600">⚠️ Cash Mismatch — $3.20</div>
+      </div>
+
+      <!-- Expense -->
+      <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px">Expenses</div>
+      <div style="background:var(--bg3);border-radius:var(--rd2);padding:12px;margin-bottom:14px;font-size:11px">
+        <div style="text-align:center;color:var(--t3);padding:6px 0">No expenses recorded for this date</div>
+      </div>
+
+      <!-- Bridge Summary -->
+      <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px">Finance Bridge Preview</div>
+      <div style="background:var(--bbg);border-radius:var(--rd2);padding:12px;margin-bottom:14px;font-size:10px;color:var(--b)">
+        <div style="margin-bottom:4px;font-weight:600">When synced, these records will be created in Finance:</div>
+        <div style="padding:2px 0">• Income: SD-MANGO-20260317-eftpos1 → $5,200.00</div>
+        <div style="padding:2px 0">• Income: SD-MANGO-20260317-eftpos2 → $3,800.50</div>
+        <div style="padding:2px 0">• Income: SD-MANGO-20260317-cash → $2,100.00</div>
+        <div style="padding:2px 0">• Income: SD-MANGO-20260317-ubereats → $1,524.78</div>
+        <div style="padding:2px 0">• Income: SD-MANGO-20260317-doordash → $800.00</div>
+        <div style="padding:2px 0">• Income: SD-MANGO-20260317-square → $1,200.00</div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-gold" style="flex:1;padding:10px" id="sd-sync-btn">🔒 Confirm & Sync to Finance</button>
+        <button class="btn btn-outline" style="flex:0 0 auto" onclick="closeSyncDetail()">Cancel</button>
+      </div>
+      <div style="font-size:9px;color:var(--t3);text-align:center;margin-top:8px">Once synced, data will be locked and sent to Finance module</div>
+    </div>
+  </div>
+</div>
+
+<div class="wm">WIREFRAME v3 — Multi-Page with Sync Detail</div>
+
+<script>
+// Page navigation
+function goPage(id) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  const pg = document.getElementById('pg-' + id);
+  if (pg) pg.classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll(`.sb-item[data-page="${id}"]`).forEach(s => s.classList.add('active'));
+}
+
+// Sub tab navigation
+function subTab(el, tabId) {
+  const parent = el.closest('.page-section');
+  parent.querySelectorAll('.page-tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  parent.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+  const tab = document.getElementById(tabId);
+  if (tab) tab.classList.add('active');
+}
+
+// Sync Detail popup
+function showSyncDetail(date, store, sales, expense, cashVar, status) {
+  const popup = document.getElementById('sync-detail-popup');
+  popup.style.display = '';
+  document.getElementById('sd-title').textContent = `${store} — ${date}`;
+  const banner = document.getElementById('sd-status-banner');
+  const btn = document.getElementById('sd-sync-btn');
+  if (status === 'synced') {
+    banner.style.background = 'var(--gbg)';
+    banner.style.color = 'var(--g)';
+    banner.textContent = '🔒 This record is already synced to Finance';
+    btn.style.display = 'none';
+  } else {
+    banner.style.background = 'var(--obg)';
+    banner.style.color = 'var(--o)';
+    banner.textContent = '✏️ Editable — Review details before syncing';
+    btn.style.display = '';
+  }
+}
+function closeSyncDetail() {
+  document.getElementById('sync-detail-popup').style.display = 'none';
+}
+</script>
+
+</body>
+</html>

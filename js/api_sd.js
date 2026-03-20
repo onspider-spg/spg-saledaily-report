@@ -35,6 +35,7 @@ const API = (() => {
       account_id: d.account_id, user_id: d.user_id,
       display_name: d.display_name, full_name: d.full_name || '',
       tier_id: d.tier_id, tier_level: d.tier_level,
+      position_id: d.position_id || '', position_name: d.position_name || '', position_level: d.position_level || 99,
       store_id: d.store_id, dept_id: d.dept_id,
       store_name: d.store_name || '', brand: d.brand || '',
       access_level: d.access_level, permissions: d.permissions || {},
@@ -47,7 +48,7 @@ const API = (() => {
   function clearSession() { localStorage.removeItem(SK); localStorage.removeItem(TK); }
 
   function hasPermission(key) { return getSession()?.permissions?.[key] === true; }
-  function isHQ() { const s = getSession(); return s?.store_id === 'HQ' || (s?.tier_level || 99) <= 2; }
+  function isHQ() { const s = getSession(); const lv = s?.position_id ? (s.position_level || 99) : (s?.tier_level || 99); return s?.store_id === 'HQ' || lv <= 2; }
   function tokenBody(extra = {}) { return { token: getToken(), ...extra }; }
 
   // ─── HTTP POST ───

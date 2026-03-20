@@ -125,7 +125,7 @@ const App = (() => {
   function buildDesktopSidebar() {
     const sb = document.getElementById('dk-sidebar');
     if (!sb) return;
-    const tl = S.session?.tier_level || 99;
+    const tl = S.session?.position_id ? (S.session.position_level || 99) : (S.session?.tier_level || 99);
 
     const groups = [
       { ico: '◇', label: 'Dashboard', route: 'dashboard', type: 'item' },
@@ -231,7 +231,7 @@ const App = (() => {
     const panel = document.getElementById('sidebar-panel');
     if (!panel) return;
     const s = S.session || {};
-    const tl = s.tier_level || 99;
+    const tl = s.position_id ? (s.position_level || 99) : (s.tier_level || 99);
     const initials = getInitials(s.display_name);
 
     const sections = [
@@ -259,7 +259,7 @@ const App = (() => {
     let html = `<div class="mob-sd-header">
       <div class="topbar-avatar" style="width:28px;height:28px;font-size:11px">${esc(initials)}</div>
       <div><div style="font-size:12px;font-weight:600">${esc(s.display_name)}</div>
-      <div style="font-size:9px;color:var(--t3)">${esc(s.tier_id)} · ${esc(s.store_name || s.store_id || 'HQ')}</div></div>
+      <div style="font-size:9px;color:var(--t3)">${esc(s.position_name || s.tier_id)} · ${esc(s.store_name || s.store_id || 'HQ')}</div></div>
     </div>`;
 
     sections.forEach(sec => {
@@ -319,7 +319,7 @@ const App = (() => {
       <div style="background:var(--bg3);border-radius:var(--rd);padding:14px;font-size:13px;margin-bottom:20px">
         ${profileRow('Store', s.store_name || s.store_id)}
         ${profileRow('Dept', s.dept_id)}
-        ${profileRow('Tier', s.tier_id)}
+        ${profileRow('Position', s.position_name || s.tier_id)}
       </div>
       <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="App.closeDialog();location.href='${API.HOME_URL}'">View Full Profile</button>
       <button class="btn btn-outline btn-full" style="color:var(--r);border-color:var(--r)" onclick="App.closeDialog();API.logout()">Log out</button>

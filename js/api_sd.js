@@ -1,5 +1,5 @@
 /**
- * Version 1.3.2 | 15 MAR 2026 | Siam Palette Group
+ * Version 1.3.3 | 20 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * api_sd.js — API Client + Token + Session
@@ -36,6 +36,7 @@ const API = (() => {
       display_name: d.display_name, full_name: d.full_name || '',
       tier_id: d.tier_id, tier_level: d.tier_level,
       position_id: d.position_id || '', position_name: d.position_name || '', position_level: d.position_level || 99,
+      store_assignments: d.store_assignments || [],
       store_id: d.store_id, dept_id: d.dept_id,
       store_name: d.store_name || '', brand: d.brand || '',
       access_level: d.access_level, permissions: d.permissions || {},

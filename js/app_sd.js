@@ -1,5 +1,5 @@
 /**
- * Version 1.8.6 | 16 MAR 2026 | Siam Palette Group
+ * Version 1.8.7 | 20 MAR 2026 | Siam Palette Group
  * ═══════════════════════════════════════════
  * SPG — Sale Daily Report V2
  * app_sd.js — Router + State + Shell + Sidebar + Utilities
@@ -319,7 +319,7 @@ const App = (() => {
       <div style="background:var(--bg3);border-radius:var(--rd);padding:14px;font-size:13px;margin-bottom:20px">
         ${profileRow('Store', s.store_name || s.store_id)}
         ${profileRow('Dept', s.dept_id)}
-        ${profileRow('Position', s.position_name || s.tier_id)}
+        ${profileRow(s.position_id ? 'Position' : 'Tier', s.position_id ? s.position_name : s.tier_id)}
       </div>
       <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="App.closeDialog();location.href='${API.HOME_URL}'">View Full Profile</button>
       <button class="btn btn-outline btn-full" style="color:var(--r);border-color:var(--r)" onclick="App.closeDialog();API.logout()">Log out</button>

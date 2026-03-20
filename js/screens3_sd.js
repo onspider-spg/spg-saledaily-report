@@ -819,6 +819,10 @@ const Scr3 = (() => {
   async function s8Save() {
     const btn = document.getElementById('s8-save'); if (btn) btn.disabled = true;
     try {
+      // Collect overview values (customer, note, weather etc.) into s8.report
+      // so they survive even when overview tab DOM is destroyed
+      collectS8Overview();
+
       // Collect incident notes from DOM
       s8.incidents.forEach(inc => {
         const noteWrap = document.getElementById('s8-inc-notes-' + inc.category);
@@ -857,12 +861,12 @@ const Scr3 = (() => {
         traffic: _s8Traffic || s8.report?.traffic,
         has_waste: _s8Waste ?? s8.report?.has_waste,
         pos_status: _s8PosStatus || s8.report?.pos_status || 'ok',
-        overview_note: document.getElementById('s8-note')?.value || '',
-        customer_morning: document.getElementById('s8-cust-morning')?.value,
-        customer_midday: document.getElementById('s8-cust-midday')?.value,
-        customer_afternoon: document.getElementById('s8-cust-afternoon')?.value,
-        customer_evening: document.getElementById('s8-cust-evening')?.value,
-        customer_night: document.getElementById('s8-cust-night')?.value,
+        overview_note: document.getElementById('s8-note')?.value ?? s8.report?.overview_note ?? '',
+        customer_morning: document.getElementById('s8-cust-morning')?.value ?? s8.report?.customer_morning ?? null,
+        customer_midday: document.getElementById('s8-cust-midday')?.value ?? s8.report?.customer_midday ?? null,
+        customer_afternoon: document.getElementById('s8-cust-afternoon')?.value ?? s8.report?.customer_afternoon ?? null,
+        customer_evening: document.getElementById('s8-cust-evening')?.value ?? s8.report?.customer_evening ?? null,
+        customer_night: document.getElementById('s8-cust-night')?.value ?? s8.report?.customer_night ?? null,
         incidents,
         leftovers: s8.leftovers.filter(l => l.item_name),
         is_submitted: true,
@@ -875,6 +879,7 @@ const Scr3 = (() => {
   let _lastReportText = '';
 
   async function s8Copy() {
+    collectS8Overview();
     const r = s8.report || {};
     const sm = s8.summary || {};
     const session = API.getSession();
